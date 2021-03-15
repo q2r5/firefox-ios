@@ -107,7 +107,7 @@ open class AsyncReducer<T, U> {
     /**
      * Append one or more tasks onto the end of the queue.
      *
-     * @throws AlreadyFilled if the queue has finished already.
+     * - throws: AlreadyFilled if the queue has finished already.
      */
     open func append(_ items: U...) throws -> Deferred<Maybe<T>> {
         return try append(items)
@@ -116,7 +116,7 @@ open class AsyncReducer<T, U> {
     /**
      * Append a list of tasks onto the end of the queue.
      *
-     * @throws AlreadyFilled if the queue has already finished.
+     * - throws: AlreadyFilled if the queue has already finished.
      */
     open func append(_ items: [U]) throws -> Deferred<Maybe<T>> {
         lock.lock()

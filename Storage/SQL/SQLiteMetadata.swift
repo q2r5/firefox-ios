@@ -21,7 +21,7 @@ extension SQLiteMetadata: Metadata {
 
     /// Persists the given PageMetadata object to browser.db in the page_metadata table.
     ///
-    /// - parameter metadata: Metadata object
+    /// - parameter metadata: Metadata object 
     /// - parameter pageURL:  URL of page metadata was fetched from
     /// - parameter expireAt: Expiration/TTL interval for when this metadata should expire at.
     ///

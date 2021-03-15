@@ -43,7 +43,7 @@ class SearchLoader: Loader<Cursor<Site>, SearchViewController> {
 
     fileprivate func getBookmarksAsSites(matchingSearchQuery query: String, limit: Int) -> Deferred<Maybe<Cursor<Site>>> {
         return profile.places.searchBookmarks(query: query, limit: 5).bind { result in
-            guard let bookmarkItems = result.successValue else {
+            guard case let .success(bookmarkItems) = result else {
                 return deferMaybe(ArrayCursor(data: []))
             }
 
@@ -54,7 +54,7 @@ class SearchLoader: Loader<Cursor<Site>, SearchViewController> {
 
     var query: String = "" {
         didSet {
-            guard let profile = self.profile as? BrowserProfile else {
+            guard self.profile is BrowserProfile else {
                 assertionFailure("nil profile")
                 return
             }

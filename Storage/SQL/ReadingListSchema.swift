@@ -4,6 +4,7 @@
 
 import Foundation
 import Shared
+import ObjcExceptionBridging
 import XCGLogger
 
 private let AllTables: [String] = ["items"]

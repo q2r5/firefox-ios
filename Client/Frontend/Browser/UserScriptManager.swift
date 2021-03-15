@@ -16,6 +16,7 @@ class UserScriptManager {
 
     private let noImageModeUserScript = WKUserScript.createInDefaultContentWorld(source: "window.__firefox__.NoImageMode.setEnabled(true)", injectionTime: .atDocumentStart, forMainFrameOnly: true)
     private let nightModeUserScript = WKUserScript.createInDefaultContentWorld(source: "window.__firefox__.NightMode.setEnabled(true)", injectionTime: .atDocumentStart, forMainFrameOnly: true)
+    private let printHelperUserScript = WKUserScript(source: "window.print = function () { window.webkit.messageHandlers.printHandler.postMessage({}) }", injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: .page)
 
     private init() {
         var compiledUserScripts: [String : WKUserScript] = [:]
@@ -41,7 +42,13 @@ class UserScriptManager {
                 let userScript = WKUserScript.createInPageContentWorld(source: wrappedSource, injectionTime: injectionTime, forMainFrameOnly: mainFrameOnly)
                 compiledUserScripts[webcompatName] = userScript
             }
-            
+            let shimsName = "Shims\(name)"
+            if let shimsPath = Bundle.main.path(forResource: shimsName, ofType: "js"),
+                let source = try? NSString(contentsOfFile: shimsPath, encoding: String.Encoding.utf8.rawValue) as String {
+                let wrappedSource = "(function() { const APP_ID_TOKEN = '\(UserScriptManager.appIdToken)'; \(source) })()"
+                let userScript = WKUserScript.createInPageContentWorld(source: wrappedSource, injectionTime: injectionTime, forMainFrameOnly: mainFrameOnly)
+                compiledUserScripts[webcompatName] = userScript
+            }
         }
 
         self.compiledUserScripts = compiledUserScripts
@@ -67,6 +74,8 @@ class UserScriptManager {
                 tab.webView?.configuration.userContentController.addUserScript(webcompatUserScript)
             }
         }
+        // Inject the Print Helper. This needs to be in the `page` content world in order to hook `window.print()`.
+        tab.webView?.configuration.userContentController.addUserScript(printHelperUserScript)
         // If Night Mode is enabled, inject a small user script to ensure
         // that it gets enabled immediately when the DOM loads.
         if nightMode {

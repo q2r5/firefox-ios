@@ -37,7 +37,10 @@ class DownloadContentScript: TabContentScript {
             return false
         }
         blobUrlForDownload = URL(string: safeUrl)
-        tab.webView?.evaluateJavascriptInDefaultContentWorld("window.__firefox__.download('\(safeUrl)', '\(UserScriptManager.appIdToken)')")
+        tab.webView?.startDownload(using: URLRequest(url: blobUrlForDownload!)) { download in
+            download.delegate = tab.browserViewController
+        }
+//        tab.webView?.evaluateJavascriptInDefaultContentWorld("window.__firefox__.download('\(safeUrl)', '\(UserScriptManager.appIdToken)')")
         TelemetryWrapper.recordEvent(category: .action, method: .tap, object: .downloadLinkButton)
         return true
     }

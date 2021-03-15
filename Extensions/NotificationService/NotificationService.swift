@@ -8,6 +8,7 @@ import Storage
 import Sync
 import UserNotifications
 import os.log
+import Sentry
 
 func consoleLog(_ msg: String) {
     os_log("%{public}@", log: OSLog(subsystem: "org.mozilla.firefox", category: "firefoxnotificationservice"), type: OSLogType.debug, msg)
@@ -142,19 +143,18 @@ extension SyncDataDisplay {
         Sentry.shared.send(message: "SentTab error: account not verified")
         #if MOZ_CHANNEL_BETA || DEBUG
             presentNotification(title: .SentTab_NoTabArrivingNotification_title, body: "DEBUG: Account Verified")
-            return
+        #else
+            presentNotification(title: .SentTab_NoTabArrivingNotification_title, body: .SentTab_NoTabArrivingNotification_body)
         #endif
-        presentNotification(title: .SentTab_NoTabArrivingNotification_title, body: .SentTab_NoTabArrivingNotification_body)
     }
 
     func displayUnknownMessageNotification(debugInfo: String) {
         Sentry.shared.send(message: "SentTab error: \(debugInfo)")
         #if MOZ_CHANNEL_BETA || DEBUG
             presentNotification(title: .SentTab_NoTabArrivingNotification_title, body: "DEBUG: " + debugInfo)
-            return
+        #else
+            presentNotification(title: .SentTab_NoTabArrivingNotification_title, body: .Notifications.SentTab.NoTabArrivingBody)
         #endif
-
-        presentNotification(title: .SentTab_NoTabArrivingNotification_title, body: .SentTab_NoTabArrivingNotification_body)
     }
 }
 

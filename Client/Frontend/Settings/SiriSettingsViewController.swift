@@ -12,7 +12,7 @@ class SiriSettingsViewController: SettingsTableViewController {
 
     init(prefs: Prefs) {
         self.prefs = prefs
-        super.init(style: .grouped)
+        super.init()
 
         self.title = .SettingsSiriSectionName
     }

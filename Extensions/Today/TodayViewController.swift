@@ -5,12 +5,12 @@
 import UIKit
 import NotificationCenter
 import Shared
-import SnapKit
 import XCGLogger
 
 private let log = Logger.browserLogger
 
 @objc (TodayViewController)
+@available(iOS, deprecated: 14)
 class TodayViewController: UIViewController, NCWidgetProviding, TodayWidgetAppearanceDelegate {
 
     let viewModel = TodayWidgetViewModel()
@@ -28,6 +28,7 @@ class TodayViewController: UIViewController, NCWidgetProviding, TodayWidgetAppea
         label.tintColor = TodayUX.labelColor
         label.font = UIFont.preferredFont(forTextStyle: .body)
         label.adjustsFontForContentSizeCategory = true
+        imageButton.translatesAutoresizingMaskIntoConstraints = false
         return imageButton
     }
 
@@ -63,6 +64,7 @@ class TodayViewController: UIViewController, NCWidgetProviding, TodayWidgetAppea
         stackView.alignment = .top
         stackView.spacing = TodayUX.buttonStackViewSpacing
         stackView.distribution = UIStackView.Distribution.fillEqually
+        stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
 
@@ -71,7 +73,7 @@ class TodayViewController: UIViewController, NCWidgetProviding, TodayWidgetAppea
         let widgetView: UIView!
         self.extensionContext?.widgetLargestAvailableDisplayMode = .compact
         viewModel.setViewDelegate(todayViewDelegate: self)
-        NotificationCenter.default.addObserver(self, selector: #selector(preferredContentSizeChanged(_:)), name: UIContentSizeCategory.didChangeNotification, object: nil)
+//        NotificationCenter.default.addObserver(self, selector: #selector(preferredContentSizeChanged(_:)), name: UIContentSizeCategory.didChangeNotification, object: nil)
         
         let effectView = UIVisualEffectView(effect: UIVibrancyEffect.widgetEffect(forVibrancyStyle: .label))
         
@@ -84,11 +86,15 @@ class TodayViewController: UIViewController, NCWidgetProviding, TodayWidgetAppea
         buttonStackView.addArrangedSubview(newPrivateTabButton)
         buttonStackView.addArrangedSubview(closePrivateTabsButton)
         widgetView.addSubview(buttonStackView)
-        buttonStackView.snp.makeConstraints { make in
-            make.top.equalTo(widgetView)
-            make.left.equalTo(widgetView).offset(5)
-            make.right.equalTo(widgetView).offset(-5)
-        }
+        NSLayoutConstraint.activate([
+            effectView.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+            effectView.topAnchor.constraint(equalTo: self.view.topAnchor),
+            effectView.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+            effectView.bottomAnchor.constraint(equalTo: self.view.bottomAnchor),
+            buttonStackView.topAnchor.constraint(equalTo: widgetView.topAnchor),
+            buttonStackView.leadingAnchor.constraint(equalTo: widgetView.leadingAnchor, constant: 5),
+            buttonStackView.trailingAnchor.constraint(equalTo: widgetView.trailingAnchor, constant: -5)
+        ])
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -98,41 +104,11 @@ class TodayViewController: UIViewController, NCWidgetProviding, TodayWidgetAppea
         } else {
             buttonStackView.removeArrangedSubview(openCopiedLinkButton)
         }
-        adjustFonts()
     }
 
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         let edge = size.width * TodayUX.buttonsHorizontalMarginPercentage
         buttonStackView.layoutMargins = UIEdgeInsets(top: 0, left: edge, bottom: 0, right: edge)
-    }
-
-    @objc func preferredContentSizeChanged(_ notification: Notification) {
-        adjustFonts()
-    }
-
-    func adjustFonts() {
-        let size = traitCollection.preferredContentSizeCategory
-        switch size {
-        case let size where size >= .accessibilityMedium:
-            resize(size: 25)
-        case let size where size <= .extraExtraExtraLarge && size > .extraLarge:
-            resize(size: 15)
-        case let size where size >= .large && size <= .extraLarge:
-            resize(size: 14)
-        case let size where size == .medium:
-            resize(size: 12)
-        case let size where size >= .extraSmall && size <= .small:
-            resize(size: 8)
-        default:
-            resize(size: UIFont.systemFontSize)
-        }
-    }
-
-    func resize(size: CGFloat) {
-        newTabButton.label.font = newTabButton.label.font.withSize(size)
-        newPrivateTabButton.label.font = newPrivateTabButton.label.font.withSize(size)
-        openCopiedLinkButton.label.font = openCopiedLinkButton.label.font.withSize(size)
-        closePrivateTabsButton.label.font = closePrivateTabsButton.label.font.withSize(size)
     }
 
     func widgetMarginInsets(forProposedMarginInsets defaultMarginInsets: UIEdgeInsets) -> UIEdgeInsets {

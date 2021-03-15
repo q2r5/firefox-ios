@@ -4,12 +4,16 @@
 
 import Shared
 
+private let log = Logger.browserLogger
 extension BrowserViewController: ReaderModeDelegate {
     func readerMode(_ readerMode: ReaderMode, didChangeReaderModeState state: ReaderModeState, forTab tab: Tab) {
         // If this reader mode availability state change is for the tab that we currently show, then update
         // the button. Otherwise do nothing and the button will be updated when the tab is made active.
         if tabManager.selectedTab === tab {
             urlBar.updateReaderModeState(state)
+            if #available(iOS 14, *) {
+                self.urlBar.locationView.pageOptionsButton.menu = self.getPageActionMenu()
+            }
         }
     }
 
@@ -167,7 +171,7 @@ extension BrowserViewController {
 
 extension BrowserViewController: ReaderModeBarViewDelegate {
     func readerModeBar(_ readerModeBar: ReaderModeBarView, didSelectButton buttonType: ReaderModeBarButtonType) {
-        libraryDrawerViewController?.close()
+        libraryViewController?.dismiss(animated: true)
 
         switch buttonType {
         case .settings:

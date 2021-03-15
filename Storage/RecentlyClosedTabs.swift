@@ -9,11 +9,26 @@ open class ClosedTabsStore {
     let prefs: Prefs
 
     lazy open var tabs: [ClosedTab] = {
-        guard let tabsArray: Data = self.prefs.objectForKey("recentlyClosedTabs") as Any? as? Data,
-              let unarchivedArray = NSKeyedUnarchiver.unarchiveObject(with: tabsArray) as? [ClosedTab] else {
-            return []
+        do {
+            guard let tabsArray: Data = self.prefs.objectForKey("recentlyClosedTabs") else {
+                throw NSError()
+            }
+            var unarchivedArray: [ClosedTab] = try NSKeyedUnarchiver.unarchivedArrayOfObjects(ofClass: ClosedTab.self, from: tabsArray) ?? []
+            return unarchivedArray
+        } catch {
+            do {
+                guard let tabsArray: Data = self.prefs.objectForKey("recentlyClosedTabs") else {
+                    throw NSError()
+                }
+
+                let unarchiver = try NSKeyedUnarchiver(forReadingFrom: tabsArray)
+                unarchiver.requiresSecureCoding = false
+                let unarchivedArray = try unarchiver.decodeTopLevelObject() as? [ClosedTab] ?? []
+                return unarchivedArray
+            } catch {
+                return []
+            }
         }
-        return unarchivedArray
     }()
 
     public init(prefs: Prefs) {
@@ -26,7 +41,15 @@ open class ClosedTabsStore {
         if tabs.count > 10 {
             tabs.removeLast()
         }
-        let archivedTabsArray = NSKeyedArchiver.archivedData(withRootObject: tabs)
+
+        let archivedTabsArray: Data?
+        do {
+            archivedTabsArray = try NSKeyedArchiver.archivedData(withRootObject: tabs, requiringSecureCoding: true)
+        } catch {
+            assertionFailure(error.localizedDescription)
+            archivedTabsArray = nil
+        }
+        
         prefs.setObject(archivedTabsArray, forKey: "recentlyClosedTabs")
     }
 
@@ -36,10 +59,12 @@ open class ClosedTabsStore {
     }
 }
 
-open class ClosedTab: NSObject, NSCoding {
+open class ClosedTab: NSObject, Codable, NSSecureCoding {
     public let url: URL
     public let title: String?
     public let faviconURL: String?
+
+    public static var supportsSecureCoding = true
 
     var jsonDictionary: [String: Any] {
         let title = (self.title ?? "")

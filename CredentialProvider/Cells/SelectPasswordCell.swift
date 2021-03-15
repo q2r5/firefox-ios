@@ -22,10 +22,10 @@ class SelectPasswordCell: UITableViewCell {
         backgroundColor = UIColor.CredentialProvider.tableViewBackgroundColor
     
         contentView.addSubview(selectLabel)
-        selectLabel.snp.makeConstraints { make in
-            make.centerY.equalToSuperview().multipliedBy(1.4)
-            make.leading.equalToSuperview().offset(14)
-        }
+        NSLayoutConstraint.activate([
+            selectLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor, multiplier: 1.4),
+            selectLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 14)
+        ])
     }
     
     required init?(coder aDecoder: NSCoder) {

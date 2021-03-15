@@ -8,6 +8,7 @@ import Storage
 import WebKit
 import SwiftKeychainWrapper
 import Shared
+import KIF
 @testable import Client
 
 let LabelAddressAndSearch = "Address and Search"
@@ -231,7 +232,7 @@ class BrowserUtils {
         }
         
         // if in private mode, close all tabs
-        tester.tapView(withAccessibilityLabel: "smallPrivateMask")
+        tester.tapView(withAccessibilityLabel: "privateMask")
 
         tester.tapView(withAccessibilityIdentifier: "closeAllTabsButtonTabTray")
         tester.tapView(withAccessibilityIdentifier: AccessibilityIdentifiers.TabTray.deleteCloseAllButton)
@@ -399,7 +400,7 @@ class SimplePageServer {
         // we may create more than one of these but we need to give them uniquie accessibility ids in the tab manager so we'll pass in a page number
         webServer.addHandler(forMethod: "GET", path: "/scrollablePage.html", request: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse? in
             var pageData = self.getPageData("scrollablePage")
-            let page = Int((request.query?["page"] as! String))!
+            let page = Int(request.query!["page"]!)!
             pageData = pageData.replacingOccurrences(of: "{page}", with: page.description)
             return GCDWebServerDataResponse(html: pageData as String)
         }
@@ -407,7 +408,7 @@ class SimplePageServer {
         webServer.addHandler(forMethod: "GET", path: "/numberedPage.html", request: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse? in
             var pageData = self.getPageData("numberedPage")
 
-            let page = Int((request.query?["page"] as! String))!
+            let page = Int(request.query!["page"]!)!
             pageData = pageData.replacingOccurrences(of: "{page}", with: page.description)
 
             return GCDWebServerDataResponse(html: pageData as String)

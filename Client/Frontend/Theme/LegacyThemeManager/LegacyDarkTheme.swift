@@ -49,7 +49,7 @@ fileprivate class DarkBrowserColor: BrowserColor {
 
 // The back/forward/refresh/menu button (bottom toolbar)
 fileprivate class DarkToolbarButtonColor: ToolbarButtonColor {
-
+    override var selectedTint: UIColor { return UIColor.Photon.Blue20 }
 }
 
 fileprivate class DarkTabTrayColor: TabTrayColor {
@@ -125,6 +125,8 @@ fileprivate class DarkHomePanelColor: HomePanelColor {
     override var shortcutShadowOpacity: Float { return 0.5 }
     
     override var recentlySavedBookmarkCellBackground: UIColor { return UIColor.Photon.DarkGrey30 }
+    override var jumpbackInGroupIconColour: UIColor { return UIColor.white } 
+    override var recentlyVisitedCellGroupImage: UIColor { return .white }
 
     override var downloadedFileIcon: UIColor { return UIColor.Photon.Grey30 }
 

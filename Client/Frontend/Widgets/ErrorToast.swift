@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import UIKit
-import SnapKit
 
 private struct ErrorToastDefaultUX {
     static let cornerRadius: CGFloat = 40
@@ -18,6 +17,7 @@ class ErrorToast: UIView {
         label.textColor = ErrorToastDefaultUX.textColor
         label.textAlignment = .center
         label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
@@ -37,9 +37,12 @@ class ErrorToast: UIView {
         super.init(frame: frame)
         isOpaque = false
         addSubview(textLabel)
-        textLabel.snp.makeConstraints { make in
-            make.edges.equalTo(self).inset(ErrorToastDefaultUX.margins)
-        }
+        NSLayoutConstraint.activate([
+            textLabel.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: ErrorToastDefaultUX.margins.left),
+            textLabel.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -ErrorToastDefaultUX.margins.right),
+            textLabel.topAnchor.constraint(equalTo: self.topAnchor, constant: ErrorToastDefaultUX.margins.top),
+            textLabel.bottomAnchor.constraint(equalTo: self.bottomAnchor, constant: -ErrorToastDefaultUX.margins.bottom)
+        ])
     }
 
     required init?(coder aDecoder: NSCoder) {

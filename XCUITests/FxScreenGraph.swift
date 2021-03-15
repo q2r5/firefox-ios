@@ -345,16 +345,16 @@ func createScreenGraph(for test: XCTestCase, with app: XCUIApplication) -> MMScr
     }
 
     map.addScreenState(URLBarLongPressMenu) { screenState in
-        let menu = app.tables["Context Menu"].firstMatch
+        let menu = app.collectionViews.firstMatch
 
         screenState.gesture(forAction: Action.LoadURLByPasting, Action.LoadURL) { userState in
             UIPasteboard.general.string = userState.url ?? defaultURL
-            menu.cells["menu-PasteAndGo"].firstMatch.tap()
+            menu.buttons["menu-PasteAndGo"].firstMatch.tap()
         }
 
         screenState.gesture(forAction: Action.SetURLByPasting) { userState in
             UIPasteboard.general.string = userState.url ?? defaultURL
-            menu.cells["menu-Paste"].firstMatch.tap()
+            menu.buttons["menu-Paste"].firstMatch.tap()
         }
 
         screenState.backAction = {
@@ -1028,12 +1028,12 @@ func createScreenGraph(for test: XCTestCase, with app: XCUIApplication) -> MMScr
 
     // make sure after the menu action, navigator.nowAt() is used to set the current state
     map.addScreenState(PageOptionsMenu) {screenState in
-        screenState.tap(app.tables["Context Menu"].cells["menu-RequestDesktopSite"], to: RequestDesktopSite)
-        screenState.tap(app.tables["Context Menu"].cells["menu-ViewMobile"], to: RequestMobileSite)
-        screenState.tap(app.tables["Context Menu"].cells["menu-FindInPage"], to: FindInPage)
-        screenState.tap(app.tables["Context Menu"].cells["menu-Bookmark"], forAction: Action.BookmarkThreeDots, Action.Bookmark)
-        screenState.tap(app.tables.cells["action_pin"], forAction: Action.PinToTopSitesPAM)
-        screenState.tap(app.tables.cells["menu-Copy-Link"], forAction: Action.CopyAddressPAM)
+        screenState.tap(app.collectionViews["PageOptionsMenu"].cells["menu-RequestDesktopSite"], to: RequestDesktopSite)
+        screenState.tap(app.collectionViews["PageOptionsMenu"].cells["menu-ViewMobile"], to: RequestMobileSite)
+        screenState.tap(app.collectionViews["PageOptionsMenu"].cells["menu-FindInPage"], to: FindInPage)
+        screenState.tap(app.collectionViews["PageOptionsMenu"].cells["menu-Bookmark"], forAction: Action.BookmarkThreeDots, Action.Bookmark)
+        screenState.tap(app.collectionViews.cells["action_pin"], forAction: Action.PinToTopSitesPAM)
+        screenState.tap(app.collectionViews.cells["menu-Copy-Link"], forAction: Action.CopyAddressPAM)
         screenState.backAction = cancelBackAction
         screenState.dismissOnUse = true
     }

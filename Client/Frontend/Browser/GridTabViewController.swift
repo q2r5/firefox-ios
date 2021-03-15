@@ -27,7 +27,9 @@ protocol TabTrayDelegate: AnyObject {
     func tabTrayDidDismiss(_ tabTray: GridTabViewController)
     func tabTrayDidAddTab(_ tabTray: GridTabViewController, tab: Tab)
     func tabTrayDidAddBookmark(_ tab: Tab)
+    func tabTrayDidRemoveBookmark(_ tab: Tab)
     func tabTrayDidAddToReadingList(_ tab: Tab) -> ReadingListItem?
+    func tabTrayDidRemoveFromReadingList(_ tab: Tab)
     func tabTrayRequestsPresentationOf(_ viewController: UIViewController)
     func tabTrayOpenRecentlyClosedTab(_ url: URL)
 }
@@ -57,7 +59,7 @@ class GridTabViewController: UIViewController, TabTrayViewDelegate {
     }()
 
     fileprivate lazy var tabLayoutDelegate: TabLayoutDelegate = {
-        let delegate = TabLayoutDelegate(tabDisplayManager: self.tabDisplayManager, traitCollection: self.traitCollection, scrollView: self.collectionView)
+        let delegate = TabLayoutDelegate(tabDisplayManager: self.tabDisplayManager, traitCollection: self.traitCollection)
         delegate.tabSelectionDelegate = self
         return delegate
     }()
@@ -192,9 +194,7 @@ class GridTabViewController: UIViewController, TabTrayViewDelegate {
             tabDisplayManager.togglePrivateMode(isOn: true, createTabOnEmptyPrivateMode: false)
         }
 
-        if traitCollection.forceTouchCapability == .available {
-            registerForPreviewing(with: self, sourceView: view)
-        }
+        self.view.addInteraction(UIContextMenuInteraction(delegate: self))
 
         emptyPrivateTabsView.isHidden = !privateTabsAreEmpty()
 
@@ -349,17 +349,19 @@ extension GridTabViewController {
     }
 
     func closeTabsForCurrentTray() {
-        let tabs = self.tabDisplayManager.isPrivate ? tabManager.privateTabs : tabManager.normalTabs
-        let maxTabs = 100
-        if self.tabDisplayManager.isPrivate {
-            self.tabManager.removeTabsWithoutToast(tabs)
-            self.tabManager.selectTab(mostRecentTab(inTabs: tabManager.normalTabs) ?? tabManager.normalTabs.last, previous: nil)
-        } else if tabs.count >= maxTabs {
-            self.tabManager.removeTabsAndAddNormalTab(tabs)
-        } else {
-            self.tabManager.removeTabsWithToast(tabs)
+        tabDisplayManager.hideDisplayedTabs {
+            let tabs = self.tabDisplayManager.isPrivate ? self.tabManager.privateTabs : self.tabManager.normalTabs
+            let maxTabs = 100
+            if self.tabDisplayManager.isPrivate {
+                self.tabManager.removeTabsWithoutToast(tabs)
+                self.tabManager.selectTab(mostRecentTab(inTabs: self.tabManager.normalTabs) ?? self.tabManager.normalTabs.last, previous: nil)
+            } else if tabs.count >= maxTabs {
+                self.tabManager.removeTabsAndAddNormalTab(tabs)
+            } else {
+                self.tabManager.removeTabsWithToast(tabs)
+            }
+            self.closeTabsTrayHelper()
         }
-        closeTabsTrayHelper()
     }
 
     func closeTabsTrayHelper() {
@@ -492,10 +494,32 @@ extension GridTabViewController: TabPeekDelegate {
 
     func tabPeekDidAddBookmark(_ tab: Tab) {
         delegate?.tabTrayDidAddBookmark(tab)
+        SimpleToast().showAlertWithText(.AppMenuAddBookmarkConfirmMessage, bottomContainer: self.collectionView)
+    }
+
+    func tabPeekDidRemoveBookmark(_ tab: Tab) {
+        delegate?.tabTrayDidRemoveBookmark(tab)
+        let toast = ButtonToast(labelText: .AppMenuRemoveBookmarkConfirmMessage, buttonText: .UndoString, textAlignment: .left) { isButtonTapped in
+            isButtonTapped ? self.delegate?.tabTrayDidAddBookmark(tab) : nil
+        }
+
+        toast.showToast(viewController: self, delay: SimpleToastUX.ToastDelayBefore, duration: SimpleToastUX.ToastDismissAfter) { make in
+            [
+                make.leadingAnchor.constraint(equalTo: self.view.leadingAnchor),
+                make.trailingAnchor.constraint(equalTo: self.view.trailingAnchor),
+                make.bottomAnchor.constraint(equalTo: self.view.bottomAnchor)
+            ]
+        }
     }
 
     func tabPeekDidAddToReadingList(_ tab: Tab) -> ReadingListItem? {
+        SimpleToast().showAlertWithText(
+            .AppMenuAddToReadingListConfirmMessage, bottomContainer: self.collectionView)
         return delegate?.tabTrayDidAddToReadingList(tab)
+    }
+
+    func tabPeekDidRemoveFromReadingList(_ tab: Tab) {
+        delegate?.tabTrayDidRemoveFromReadingList(tab)
     }
 
     func tabPeekDidCloseTab(_ tab: Tab) {
@@ -510,15 +534,12 @@ extension GridTabViewController: TabPeekDelegate {
     }
 }
 
-extension GridTabViewController: UIViewControllerPreviewingDelegate {
-
-    func previewingContext(_ previewingContext: UIViewControllerPreviewing, viewControllerForLocation location: CGPoint) -> UIViewController? {
-
+extension GridTabViewController: UIContextMenuInteractionDelegate {
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
         guard let collectionView = collectionView else { return nil }
         let convertedLocation = self.view.convert(location, to: collectionView)
 
-        guard let indexPath = collectionView.indexPathForItem(at: convertedLocation),
-            let cell = collectionView.cellForItem(at: indexPath) else { return nil }
+        guard let indexPath = collectionView.indexPathForItem(at: convertedLocation) else { return nil }
 
         guard let tab = tabDisplayManager.dataStore.at(indexPath.row) else {
             return nil
@@ -527,16 +548,8 @@ extension GridTabViewController: UIViewControllerPreviewingDelegate {
         if let browserProfile = profile as? BrowserProfile {
             tabVC.setState(withProfile: browserProfile, clientPickerDelegate: self)
         }
-        previewingContext.sourceRect = self.view.convert(cell.frame, from: collectionView)
 
-        return tabVC
-    }
-
-    func previewingContext(_ previewingContext: UIViewControllerPreviewing, commit viewControllerToCommit: UIViewController) {
-        guard let tpvc = viewControllerToCommit as? TabPeekViewController else { return }
-        tabManager.selectTab(tpvc.tab)
-        navigationController?.popViewController(animated: true)
-        delegate?.tabTrayDidDismiss(self)
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: { return tabVC }, actionProvider: tabVC.contextActions(defaultActions:))
     }
 }
 
@@ -627,7 +640,6 @@ extension GridTabViewController {
 fileprivate class TabLayoutDelegate: NSObject, UICollectionViewDelegateFlowLayout, UIGestureRecognizerDelegate {
     weak var tabSelectionDelegate: TabSelectionDelegate?
     var searchHeightConstraint: Constraint?
-    let scrollView: UIScrollView
     var lastYOffset: CGFloat = 0
     var tabDisplayManager: TabDisplayManager
 
@@ -640,7 +652,6 @@ fileprivate class TabLayoutDelegate: NSObject, UICollectionViewDelegateFlowLayou
         case down
     }
 
-    fileprivate var scrollDirection: ScrollDirection = .down
     fileprivate var traitCollection: UITraitCollection
     fileprivate var numberOfColumns: Int {
         // iPhone 4-6+ portrait
@@ -651,9 +662,8 @@ fileprivate class TabLayoutDelegate: NSObject, UICollectionViewDelegateFlowLayou
         }
     }
 
-    init(tabDisplayManager: TabDisplayManager, traitCollection: UITraitCollection, scrollView: UIScrollView) {
+    init(tabDisplayManager: TabDisplayManager, traitCollection: UITraitCollection) {
         self.tabDisplayManager = tabDisplayManager
-        self.scrollView = scrollView
         self.traitCollection = traitCollection
         super.init()
     }
@@ -742,14 +752,14 @@ fileprivate class TabLayoutDelegate: NSObject, UICollectionViewDelegateFlowLayou
 }
 
 extension GridTabViewController: DevicePickerViewControllerDelegate {
-    func devicePickerViewController(_ devicePickerViewController: DevicePickerViewController, didPickDevices devices: [RemoteDevice]) {
+    func devicePickerViewController(_ devicePickerViewController: DevicePicker, didPickDevices devices: [RemoteDevice]) {
         if let item = devicePickerViewController.shareItem {
             _ = self.profile.sendItem(item, toDevices: devices)
         }
         devicePickerViewController.dismiss(animated: true, completion: nil)
     }
 
-    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePickerViewController) {
+    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePicker) {
         devicePickerViewController.dismiss(animated: true, completion: nil)
     }
 }
@@ -821,11 +831,18 @@ class TabCell: UICollectionViewCell, TabTrayCell {
 
     let closeButton: UIButton = {
         let button = UIButton()
-        button.setImage(UIImage.templateImageNamed("tab_close"), for: [])
         button.imageView?.contentMode = .scaleAspectFit
         button.contentMode = .center
         button.tintColor = UIColor.theme.tabTray.cellCloseButton
-        button.imageEdgeInsets = UIEdgeInsets(equalInset: GridTabTrayControllerUX.CloseButtonEdgeInset)
+        if #available(iOS 15, *) {
+            button.configuration = .plain()
+            button.configuration?.contentInsets = NSDirectionalEdgeInsets(top: GridTabTrayControllerUX.CloseButtonEdgeInset, leading: GridTabTrayControllerUX.CloseButtonEdgeInset, bottom: GridTabTrayControllerUX.CloseButtonEdgeInset, trailing: GridTabTrayControllerUX.CloseButtonEdgeInset)
+            button.configuration?.image = UIImage.templateImageNamed("tab_close")
+            button.configuration?.buttonSize = .small
+        } else {
+            button.setImage(UIImage.templateImageNamed("tab_close"), for: [])
+            button.imageEdgeInsets = UIEdgeInsets(equalInset: GridTabTrayControllerUX.CloseButtonEdgeInset)
+        }
         return button
     }()
 
@@ -884,7 +901,7 @@ class TabCell: UICollectionViewCell, TabTrayCell {
         }
 
         screenshotView.snp.makeConstraints { make in
-            make.top.equalToSuperview()
+            make.top.equalTo(titleText.snp.bottom)
             make.left.right.equalTo(backgroundHolder)
             make.bottom.equalTo(backgroundHolder.snp.bottom)
         }

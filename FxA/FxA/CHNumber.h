@@ -71,7 +71,7 @@
 
 + (id)numberWithData:(NSData *)data;
 
-+ (id) numberWithOpenSSLNumber: (BIGNUM*) bn;
++ (id)numberWithOpenSSLNumber: (const BIGNUM*) bn;
 
 /**
  Creates an autoreleased CHNumber initialized to the value of @a number
@@ -116,7 +116,7 @@
  */
 - (id)initWithData:(NSData*)data;
 
-- (id)initWithOpenSSLNumber:(BIGNUM*)bn;
+- (id)initWithOpenSSLNumber:(const BIGNUM*)bn;
 
 /**
  Creates a new CHNumber initialized to the value of @a number
@@ -168,7 +168,7 @@
  @note depending on the size of the receiver, this method may take a very long time to return
  @return an NSArray of CHNumbers.
  */
-- (NSArray *)factors;
+//- (NSArray *)factors;
 
 #pragma mark Comparisons
 

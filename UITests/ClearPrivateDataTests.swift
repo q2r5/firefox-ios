@@ -7,6 +7,7 @@ import WebKit
 import UIKit
 import GCDWebServers
 @testable import Client
+import KIF
 
 class ClearPrivateDataTests: KIFTestCase, UITextFieldDelegate {
 
@@ -32,7 +33,7 @@ class ClearPrivateDataTests: KIFTestCase, UITextFieldDelegate {
             tester().waitForWebViewElementWithAccessibilityLabel("Page \(pageNo)")
             let dom = URL(string: url)!.normalizedHost!
             let index = dom.index(dom.startIndex, offsetBy: 7)
-            let dispDom = dom.substring(to: index)  // On IPhone, it only displays first 8 chars
+            let dispDom = String(dom[...index]) // On IPhone, it only displays first 8 chars
             let tuple: (title: String, domain: String, dispDomain: String, url: String)
             = ("Page \(pageNo)", dom, dispDom, url)
             urls.append(tuple)

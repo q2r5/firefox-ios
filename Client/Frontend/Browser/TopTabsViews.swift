@@ -56,13 +56,20 @@ class TopTabCell: UICollectionViewCell, NotificationThemeable, TabTrayCell {
 
     let closeButton: UIButton = {
         let closeButton = UIButton()
-        closeButton.setImage(UIImage.templateImageNamed("menu-CloseTabs"), for: [])
         closeButton.tintColor = UIColor.Photon.Grey40
-        closeButton.imageEdgeInsets = UIEdgeInsets(top: 15, left: TopTabsUX.TabTitlePadding, bottom: 15, right: TopTabsUX.TabTitlePadding)
         closeButton.layer.shadowOpacity = 0.8
         closeButton.layer.masksToBounds = false
         closeButton.layer.shadowOffset = CGSize(width: -TopTabsUX.TabTitlePadding, height: 0)
         closeButton.semanticContentAttribute = .forceLeftToRight
+        if #available(iOS 15, *) {
+            closeButton.configuration = .plain()
+            closeButton.configuration?.contentInsets = NSDirectionalEdgeInsets(top: 15.0, leading: TopTabsUX.TabTitlePadding, bottom: 15, trailing: TopTabsUX.TabTitlePadding)
+            closeButton.configuration?.image = UIImage.templateImageNamed("menu-CloseTabs")
+            closeButton.configuration?.buttonSize = .small
+        } else {
+            closeButton.setImage(UIImage.templateImageNamed("menu-CloseTabs"), for: [])
+            closeButton.imageEdgeInsets = UIEdgeInsets(top: 15, left: TopTabsUX.TabTitlePadding, bottom: 15, right: TopTabsUX.TabTitlePadding)
+        }
         return closeButton
     }()
 

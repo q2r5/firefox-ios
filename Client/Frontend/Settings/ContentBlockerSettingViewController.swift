@@ -147,7 +147,7 @@ class ContentBlockerSettingViewController: SettingsTableViewController {
 
         currentBlockingStrength = prefs.stringForKey(ContentBlockingConfig.Prefs.StrengthKey).flatMap({BlockingStrength(rawValue: $0)}) ?? .basic
 
-        super.init(style: .grouped)
+        super.init()
 
         self.title = .SettingsTrackingProtectionSectionName
     }

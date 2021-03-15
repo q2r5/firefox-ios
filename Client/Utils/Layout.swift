@@ -12,6 +12,10 @@ extension NSLayoutConstraint {
         self.priority = priority
         return self
     }
+
+    static func deactivate(_ views: UIView...) {
+        views.forEach { deactivate($0.constraints) }
+    }
 }
 
 extension NSLayoutAnchor where AnchorType == NSLayoutXAxisAnchor {

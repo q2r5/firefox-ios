@@ -6,8 +6,7 @@ import Foundation
 import Shared
 import XCGLogger
 import SwiftyJSON
-import MozillaAppServices
-
+import FxAClient
 
 public let FxAClientErrorDomain = "org.mozilla.fxa.error"
 public let FxAClientUnknownError = NSError(domain: FxAClientErrorDomain, code: 999,
@@ -65,7 +64,7 @@ private let CurrentSyncAuthStateCacheVersion = 1
 
 private let log = Logger.syncLogger
 
-public struct SyncAuthStateCache {
+public struct SyncAuthStateCache: Codable {
     let token: TokenServerToken
     let forKey: Data
     let expiresAt: Timestamp

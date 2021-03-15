@@ -187,8 +187,12 @@ class ReadingListPanel: UITableViewController, LibraryPanel {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        // Note this will then call applyTheme() on this class, which reloads the tableview.
-        (navigationController as? ThemedNavigationController)?.applyTheme()
+        if let navigationController = navigationController as? ThemedNavigationController {
+            // Note this will then call applyTheme() on this class, which reloads the tableview.
+            navigationController.applyTheme()
+        } else {
+            applyTheme()
+        }
     }
 
     override func viewDidLoad() {
@@ -317,22 +321,22 @@ class ReadingListPanel: UITableViewController, LibraryPanel {
         return cell
     }
 
-    override func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         guard let record = records?[indexPath.row] else {
-            return []
+            return nil
         }
 
-        let delete = UITableViewRowAction(style: .default, title: .ReaderPanelRemove) { [weak self] action, index in
-            self?.deleteItem(atIndex: index)
+        let delete = UIContextualAction(style: .destructive, title: .ReaderPanelRemove) { [weak self] action, _, _ in
+            self?.deleteItem(atIndex: indexPath)
         }
 
         let toggleText: String = record.unread ? .ReaderPanelMarkAsRead : .ReaderModeBarMarkAsUnread
-        let unreadToggle = UITableViewRowAction(style: .normal, title: toggleText.stringSplitWithNewline()) { [weak self] (action, index) in
-            self?.toggleItem(atIndex: index)
+        let unreadToggle = UIContextualAction(style: .normal, title: toggleText.stringSplitWithNewline()) { [weak self] (action, _, _) in
+            self?.toggleItem(atIndex: indexPath)
         }
         unreadToggle.backgroundColor = ReadingListTableViewCellUX.MarkAsReadButtonBackgroundColor
 
-        return [unreadToggle, delete]
+        return UISwipeActionsConfiguration(actions: [unreadToggle, delete])
     }
 
     override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {

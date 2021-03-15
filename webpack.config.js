@@ -6,6 +6,7 @@ const AllFramesAtDocumentEnd = glob.sync("./Client/Frontend/UserContent/UserScri
 const MainFrameAtDocumentStart = glob.sync("./Client/Frontend/UserContent/UserScripts/MainFrame/AtDocumentStart/*.js");
 const MainFrameAtDocumentEnd = glob.sync("./Client/Frontend/UserContent/UserScripts/MainFrame/AtDocumentEnd/*.js");
 const WebcompatAllFramesAtDocumentStart = glob.sync("./Client/Frontend/UserContent/UserScripts/AllFrames/WebcompatAtDocumentStart/*.js");
+const ShimsAllFramesAtDocumentStart = glob.sync("./Client/Frontend/UserContent/UserScripts/AllFrames/Shims/*.js");
 
 // Ensure the first script loaded at document start is __firefox__.js
 // since it defines the `window.__firefox__` global.
@@ -33,6 +34,7 @@ module.exports = {
     MainFrameAtDocumentStart,
     MainFrameAtDocumentEnd,
     WebcompatAllFramesAtDocumentStart,
+    ShimsAllFramesAtDocumentStart,
   },
   // optimization: { minimize: false }, // use for debugging
   output: {
@@ -42,5 +44,10 @@ module.exports = {
   module: {
     rules: []
   },
-  plugins: []
+  plugins: [],
+	resolve: {
+		fallback: {
+			"url": require.resolve("url/")
+		}
+	}
 };

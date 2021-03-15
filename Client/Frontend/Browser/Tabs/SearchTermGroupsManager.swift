@@ -4,7 +4,7 @@
 
 import Foundation
 import Shared
-import MozillaAppServices
+import Places
 
 struct ASGroup<T> {
     let searchTerm: String
@@ -43,7 +43,7 @@ class SearchTermGroupsManager {
 //        guard (items is [Tab] || items is [URL]) else { return completion(nil, [T]()) }
         guard (items is [Tab]) else { return completion(nil, [T]()) }
 
-        let lastTwoWeek = Int64(Date().lastTwoWeek.timeIntervalSince1970)
+        let lastTwoWeek = Int64(Date().lastTwoWeeks.timeIntervalSince1970)
         profile.places.getHistoryMetadataSince(since: lastTwoWeek).uponQueue(.main) { result in
             guard let historyMetadata = result.successValue else { return completion(nil, [T]()) }
 
@@ -107,13 +107,10 @@ class SearchTermGroupsManager {
                     var stringURL: String = ""
                     if let item = item as? URL {
                         stringURL = item.absoluteString
-
                     } else if let item = item as? Tab, let url = item.lastKnownUrl?.absoluteString {
                         stringURL = url
                     }
-
                     return metadata.url == stringURL || metadata.referrerUrl == stringURL
-
                 }) {
                     itemsInGroups.append(item)
                     if itemGroupData[searchTerm] == nil {
@@ -125,7 +122,6 @@ class SearchTermGroupsManager {
                 }
             }
         }
-
         return (itemGroupData, itemsInGroups)
     }
 

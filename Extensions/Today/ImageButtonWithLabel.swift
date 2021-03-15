@@ -5,8 +5,20 @@
 import UIKit
 
 class ImageButtonWithLabel: UIView {
-    lazy var button = UIButton()
-    lazy var label = UILabel()
+    lazy var button: UIButton = {
+        let button = UIButton()
+        button.imageView?.contentMode = .scaleAspectFill
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    lazy var label: UILabel = {
+        let label = UILabel()
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.lineBreakMode = .byWordWrapping
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -20,23 +32,17 @@ class ImageButtonWithLabel: UIView {
     fileprivate func performLayout() {
         addSubview(button)
         addSubview(label)
-        button.imageView?.contentMode = .scaleAspectFill
-        button.snp.makeConstraints { make in
-            make.centerX.equalTo(self)
-            make.top.right.left.equalToSuperview()
-            make.height.equalTo(70)
-        }
-
-        label.snp.makeConstraints { make in
-            make.top.equalTo(button.snp.bottom).offset(3)
-            make.leading.equalTo(button.snp.leading)
-            make.trailing.equalTo(button.snp.trailing)
-            make.bottom.equalTo(self)
-        }
-
-        label.numberOfLines = 0
-        label.textAlignment = .center
-        label.lineBreakMode = .byWordWrapping
+        NSLayoutConstraint.activate([
+            button.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+            button.topAnchor.constraint(equalTo: self.topAnchor),
+            button.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            button.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            button.heightAnchor.constraint(equalToConstant: 70),
+            label.topAnchor.constraint(equalTo: button.bottomAnchor, constant: 3),
+            label.leadingAnchor.constraint(equalTo: button.leadingAnchor),
+            label.trailingAnchor.constraint(equalTo: button.trailingAnchor),
+            label.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+        ])
     }
 
     func addTarget(_ target: AnyObject?, action: Selector, forControlEvents events: UIControl.Event) {

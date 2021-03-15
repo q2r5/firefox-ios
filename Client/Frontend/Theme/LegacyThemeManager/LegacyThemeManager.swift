@@ -10,6 +10,22 @@ enum LegacyThemeManagerPrefs: String {
     case themeName = "prefKeyThemeName"
 }
 
+extension UIConfigurationStateCustomKey {
+    static let currentTheme = UIConfigurationStateCustomKey("org.mozilla.Firefox.currentTheme")
+}
+
+extension UIConfigurationState {
+    var currentTheme: LegacyTheme {
+        get {
+            return themeFrom(name: self[.currentTheme] as? String)
+        }
+        set {
+            self[.currentTheme] = newValue.name
+            LegacyThemeManager.instance.current = newValue
+        }
+    }
+}
+
 class LegacyThemeManager {
     static let instance = LegacyThemeManager()
 

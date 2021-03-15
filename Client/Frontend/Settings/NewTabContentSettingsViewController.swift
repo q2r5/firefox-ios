@@ -13,7 +13,7 @@ class NewTabContentSettingsViewController: SettingsTableViewController {
     var hasHomePage = false
     init(prefs: Prefs) {
         self.prefs = prefs
-        super.init(style: .grouped)
+        super.init()
 
         self.title = .SettingsNewTabTitle
     }

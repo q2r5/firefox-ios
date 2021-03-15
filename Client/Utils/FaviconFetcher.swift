@@ -6,6 +6,8 @@ import Shared
 import XCGLogger
 import SDWebImage
 import Fuzi
+import Sentry
+import Foundation
 
 private let log = Logger.browserLogger
 
@@ -130,10 +132,10 @@ open class FaviconFetcher: NSObject, XMLParserDelegate {
         faviconLabel.font = UIFont.systemFont(ofSize: 40, weight: UIFont.Weight.medium)
         faviconLabel.textColor = UIColor.Photon.White100
         faviconLabel.backgroundColor = color(forUrl: url)
-        UIGraphicsBeginImageContextWithOptions(faviconLabel.bounds.size, false, 0.0)
-        faviconLabel.layer.render(in: UIGraphicsGetCurrentContext()!)
-        faviconImage = UIGraphicsGetImageFromCurrentImageContext()!
-        UIGraphicsEndImageContext()
+        let renderer = UIGraphicsImageRenderer(size: faviconLabel.bounds.size)
+        faviconImage = renderer.image { context in
+            faviconLabel.layer.render(in: context.cgContext)
+        }
 
         characterToFaviconCache[faviconLetter] = faviconImage
         return faviconImage
@@ -169,6 +171,7 @@ open class FaviconFetcher: NSObject, XMLParserDelegate {
                 // save image to disk cache
                 if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: AppInfo.sharedContainerIdentifier)    {
                     let imageKeyDirectoryUrl = container.appendingPathComponent("Library/Caches/fxfavicon/\(imageKey)")
+                    try FileManager.default.createDirectory(at: container.appendingPathComponent("Library/Caches/fxfavicon/"), withIntermediateDirectories: true, attributes: nil)
                     try data?.write(to: imageKeyDirectoryUrl)
                 }
             } catch let err as NSError {

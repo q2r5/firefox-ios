@@ -6,7 +6,6 @@ import Foundation
 import Shared
 import Sync
 import Account
-import MozillaAppServices
 
 class ManageFxAccountSetting: Setting {
     let profile: Profile
@@ -123,7 +122,7 @@ class SyncContentSettingsViewController: SettingsTableViewController {
     fileprivate var enginesToSyncOnExit: Set<String> = Set()
 
     init() {
-        super.init(style: .grouped)
+        super.init(style: .insetGrouped)
 
         self.title = .FxASettingsTitle
 

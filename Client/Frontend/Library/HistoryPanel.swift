@@ -24,7 +24,7 @@ private class FetchInProgressError: MaybeErrorType {
 
 @objcMembers
 class HistoryPanel: SiteTableViewController, LibraryPanel {
-    enum Section: Int {
+    enum Section: Int, CaseIterable {
         // Showing showing recently closed, and clearing recent history are action rows of this type.
         case additionalHistoryActions
         case today
@@ -94,6 +94,16 @@ class HistoryPanel: SiteTableViewController, LibraryPanel {
         return UILongPressGestureRecognizer(target: self, action: #selector(onLongPressGestureRecognized))
     }()
 
+    lazy var searchController: UISearchController = {
+        let resultsController = HistorySearchResultsController(profile: self.profile)
+        resultsController.presentingPanel = self
+        let searchController = UISearchController(searchResultsController: resultsController)
+        searchController.searchResultsUpdater = self
+        searchController.searchBar.autocapitalizationType = .none
+        searchController.searchBar.delegate = self
+        return searchController
+    }()
+
     // MARK: - Lifecycle
     override init(profile: Profile) {
         super.init(profile: profile)
@@ -116,6 +126,8 @@ class HistoryPanel: SiteTableViewController, LibraryPanel {
         tableView.accessibilityIdentifier = "History List"
         tableView.prefetchDataSource = self
         tableView.backgroundColor = UIColor.theme.homePanel.panelBackground
+        parent?.navigationItem.searchController = searchController
+        definesPresentationContext = true
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -341,8 +353,8 @@ class HistoryPanel: SiteTableViewController, LibraryPanel {
         return cell
     }
 
-    func configureSite(_ cell: UITableViewCell, for indexPath: IndexPath) -> UITableViewCell {
-        if let site = siteForIndexPath(indexPath), let cell = cell as? TwoLineImageOverlayCell {
+    func configureSite(_ cell: TwoLineImageOverlayCell, for indexPath: IndexPath) -> TwoLineImageOverlayCell {
+        if let site = siteForIndexPath(indexPath) {
             cell.titleLabel.text = site.title
             cell.titleLabel.isHidden = site.title.isEmpty ? true : false
             cell.descriptionLabel.isHidden = false
@@ -432,10 +444,9 @@ class HistoryPanel: SiteTableViewController, LibraryPanel {
     }
 
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = super.tableView(tableView, cellForRowAt: indexPath) as! TwoLineImageOverlayCell
-        cell.accessoryType = .none
         // First section is reserved for recently closed.
         guard indexPath.section > Section.additionalHistoryActions.rawValue else {
+            let cell = tableView.dequeueReusableCell(withIdentifier: super.OneLineCellIdentifier) as! OneLineTableViewCell
             cell.leftImageView.layer.borderWidth = 0
 
             guard let row = AdditionalHistoryActionRow(rawValue: indexPath.row) else {
@@ -451,7 +462,8 @@ class HistoryPanel: SiteTableViewController, LibraryPanel {
                 return configureRecentlyClosed(oneLineCell, for: indexPath)
             }
         }
-
+        let cell = tableView.dequeueReusableCell(withIdentifier: super.CellIdentifier) as! TwoLineImageOverlayCell
+        cell.accessoryType = .none
         return configureSite(cell, for: indexPath)
     }
 
@@ -519,16 +531,16 @@ class HistoryPanel: SiteTableViewController, LibraryPanel {
         // Intentionally blank. Required to use UITableViewRowActions
     }
 
-    func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         if indexPath.section == Section.additionalHistoryActions.rawValue {
-            return []
+            return nil
         }
         let title: String = .HistoryPanelDelete
 
-        let delete = UITableViewRowAction(style: .default, title: title, handler: { (action, indexPath) in
+        let delete = UIContextualAction(style: .destructive, title: title, handler: { (action, _, _) in
             self.removeHistoryForURLAtIndexPath(indexPath: indexPath)
         })
-        return [delete]
+        return UISwipeActionsConfiguration(actions: [delete])
     }
 
     // MARK: - Empty State
@@ -640,5 +652,91 @@ extension HistoryPanel: LibraryPanelContextMenu {
         actions.append(pinTopSite)
         actions.append(removeAction)
         return actions
+    }
+}
+
+extension HistoryPanel: UISearchBarDelegate, UISearchTextFieldDelegate {
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
+    }
+}
+
+extension HistoryPanel: UISearchResultsUpdating {
+    private func findMatches(searchString: String) -> NSCompoundPredicate {
+        let titleExpression = NSExpression(forKeyPath: Site.Keys.title.rawValue)
+        let searchStringExpression = NSExpression(forConstantValue: searchString)
+        let titleComparisonPredicate = NSComparisonPredicate(leftExpression: titleExpression, rightExpression: searchStringExpression,
+                                                             modifier: .direct, type: .contains, options: .caseInsensitive)
+        
+        let urlExpression = NSExpression(forKeyPath: Site.Keys.url.rawValue)
+        let urlComparisonPredicate = NSComparisonPredicate(leftExpression: urlExpression, rightExpression: searchStringExpression,
+                                                           modifier: .direct, type: .contains, options: .caseInsensitive)
+        
+        return NSCompoundPredicate(orPredicateWithSubpredicates: [titleComparisonPredicate, urlComparisonPredicate])
+    }
+
+    func updateSearchResults(for searchController: UISearchController) {
+        var results = [Site]()
+        let searchString = searchController.searchBar.text!.trimmingCharacters(in: .whitespaces)
+        let searchItems = searchString.components(separatedBy: " ") as [String]
+        
+        let andMatchPredicates: [NSPredicate] = searchItems.map { searchString in
+            findMatches(searchString: searchString)
+        }
+        let finalCompoundPredicate =
+            NSCompoundPredicate(andPredicateWithSubpredicates: andMatchPredicates)
+
+        Section.allCases.forEach {
+            if $0.rawValue > 3 { return }
+            results.append(contentsOf: groupedSites.itemsForSection($0.rawValue).filter {
+                finalCompoundPredicate.evaluate(with: $0)
+            })
+        }
+
+        (searchController.searchResultsController as? HistorySearchResultsController)?.searchResults = results
+    }
+}
+
+
+class HistorySearchResultsController: SiteTableViewController {
+    var searchResults = [Site]() {
+        didSet {
+            self.tableView.reloadData()
+        }
+    }
+    
+    var presentingPanel: LibraryPanel?
+
+    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        return searchResults.count
+    }
+
+    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
+        cell.accessoryType = .none
+        return configureSite(cell, for: indexPath)
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if let site = searchResults[safe: indexPath.row], let url = URL(string: site.url) {
+            if let libraryPanelDelegate = presentingPanel?.libraryPanelDelegate {
+                libraryPanelDelegate.libraryPanel(didSelectURL: url, visitType: VisitType.typed)
+            }
+            return
+        }
+    }
+
+    func configureSite(_ cell: UITableViewCell, for indexPath: IndexPath) -> UITableViewCell {
+        if let site = searchResults[safe: indexPath.row], let cell = cell as? TwoLineImageOverlayCell {
+            cell.titleLabel.text = site.title
+            cell.descriptionLabel.text = site.url
+            cell.leftImageView.layer.borderColor = HistoryPanelUX.IconBorderColor.cgColor
+            cell.leftImageView.layer.borderWidth = HistoryPanelUX.IconBorderWidth
+            cell.leftImageView.contentMode = .center
+            cell.leftImageView.setImageAndBackground(forIcon: site.icon, website: site.tileURL) { [weak cell] in
+                cell?.imageView?.image = cell?.imageView?.image?.createScaled(CGSize(width: HistoryPanelUX.IconSize, height: HistoryPanelUX.IconSize))
+            }
+        }
+        return cell
     }
 }

@@ -4,8 +4,7 @@
 
 import Foundation
 import Shared
-
-import SwiftyJSON
+import CryptoKit
 
 public let KeyLength = 32
 
@@ -44,35 +43,22 @@ open class KeyBundle: Hashable {
         self.hmacKey = hmacKey
     }
 
-    fileprivate func _hmac(_ ciphertext: Data) -> (data: UnsafeMutablePointer<CUnsignedChar>, len: Int) {
-        let hmacAlgorithm = CCHmacAlgorithm(kCCHmacAlgSHA256)
-        let digestLen = Int(CC_SHA256_DIGEST_LENGTH)
-        let result = UnsafeMutablePointer<CUnsignedChar>.allocate(capacity: digestLen)
-        CCHmac(hmacAlgorithm, hmacKey.getBytes(), hmacKey.count, ciphertext.getBytes(), ciphertext.count, result)
-        return (result, digestLen)
-    }
-
     open func hmac(_ ciphertext: Data) -> Data {
-        let (result, digestLen) = _hmac(ciphertext)
-        let data = NSMutableData(bytes: result, length: digestLen)
-
-        result.deinitialize(count: digestLen)
-        result.deallocate()
-        return data as Data
+        let symKey = SymmetricKey(data: hmacKey)
+        let mac = HMAC<SHA256>.authenticationCode(for: ciphertext, using: symKey)
+        return Data(mac)
     }
 
     /**
      * Returns a hex string for the HMAC.
      */
     open func hmacString(_ ciphertext: Data) -> String {
-        let (result, digestLen) = _hmac(ciphertext)
+        let result = hmac(ciphertext).getBytes()
+        let len = result.count
         let hash = NSMutableString()
-        for i in 0..<digestLen {
+        for i in 0..<len {
             hash.appendFormat("%02x", result[i])
         }
-
-        result.deinitialize(count: digestLen)
-        result.deallocate()
         return String(hash)
     }
 

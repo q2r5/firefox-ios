@@ -392,8 +392,8 @@ class TopTabsTestIphone: IphoneOnlyTestCase {
         navigator.goto(URLBarOpen)
         navigator.back()
         checkNumberOfTabsExpectedToBeOpen(expectedNumberOfTabsOpen: 1)
-        waitForExistence(app.buttons["smallPrivateMask"])
-        XCTAssertTrue(app.buttons["smallPrivateMask"].isEnabled)
+        waitForExistence(app.buttons["privateMask"])
+        XCTAssertTrue(app.buttons["privateMask"].isEnabled)
         XCTAssertTrue(userState.isPrivate)
     }
 
@@ -460,7 +460,7 @@ class TopTabsTestIphone: IphoneOnlyTestCase {
         waitForExistence(app.textFields["url"], timeout: 5)
         waitForValueContains(app.textFields["url"], value: "iana")
         navigator.goto(TabTray)
-        XCTAssertTrue(app.buttons["smallPrivateMask"].isEnabled)
+        XCTAssertTrue(app.buttons["privateMask"].isEnabled)
     }
 }
 

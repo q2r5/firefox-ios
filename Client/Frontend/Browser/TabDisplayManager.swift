@@ -5,6 +5,7 @@
 import Foundation
 import Shared
 import Storage
+import Sentry
 
 extension UIGestureRecognizer {
     func cancel() {
@@ -335,7 +336,7 @@ class TabDisplayManager: NSObject, FeatureFlagsProtocol {
     /// - Parameters:
     ///   - currentlySelected: The currently selected tab
     ///   - inSection: In which section should this tab be searched
-    /// - Returns: The index path of the found previsouly selected tab
+    /// - Returns: The index path of the found previously selected tab
     private func indexOfCellDrawnAsPreviouslySelectedTab(currentlySelected: Tab?, inSection: Int) -> IndexPath? {
         guard let currentlySelected = currentlySelected else { return nil }
 
@@ -553,6 +554,21 @@ extension TabDisplayManager: InactiveTabsDelegate {
         if let tabTray = tabDisplayer as? GridTabViewController {
             tabManager.selectTab(tab)
             tabTray.dismissTabTray()
+        }
+    }
+
+    func didCloseInactiveTab(tab: Tab) {
+        if let tabTray = tabDisplayer as? GridTabViewController {
+            if self.isPrivate == false, filteredTabs.count + (tabsInAllGroups?.count ?? 0) == 1 {
+                self.tabManager.removeTabs([tab])
+                self.tabManager.selectTab(self.tabManager.addTab())
+                tabTray.dismissTabTray()
+                return
+            }
+
+            tabManager.removeTabAndUpdateSelectedIndex(tab)
+            collectionView.reloadItems(at: [IndexPath(row: 0, section: TabDisplaySection.inactiveTabs.rawValue)])
+            collectionView.scrollToItem(at: IndexPath(row: 0, section: TabDisplaySection.inactiveTabs.rawValue), at: .bottom, animated: true)
         }
     }
 
@@ -843,12 +859,14 @@ extension TabDisplayManager: TabManagerDelegate {
     }
 
     private func updateWith(animationType: TabAnimationType, operation: (() -> Void)?) {
-        self.collectionView.reloadData()
-        if let op = operation {
-            operations.insert((animationType, op), at: 0)
-        }
+        DispatchQueue.main.async {
+            self.collectionView.reloadData()
+            if let op = operation {
+                self.operations.insert((animationType, op), at: 0)
+            }
 
-        performChainedOperations()
+            self.performChainedOperations()
+        }
     }
 
     func tabManagerDidRestoreTabs(_ tabManager: TabManager) {

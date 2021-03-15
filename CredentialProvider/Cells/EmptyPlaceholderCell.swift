@@ -33,16 +33,15 @@ class EmptyPlaceholderCell: UITableViewCell {
         backgroundColor = UIColor.CredentialProvider.tableViewBackgroundColor
         
         contentView.addSubview(titleLabel)
-        titleLabel.snp.makeConstraints { make in
-            make.centerX.equalToSuperview()
-            make.top.equalToSuperview().offset(55)
-        }
         contentView.addSubview(descriptionLabel)
-        descriptionLabel.snp.makeConstraints { make in
-            make.centerX.equalToSuperview()
-            make.width.equalTo(280)
-            make.top.equalTo(titleLabel.snp_bottomMargin).offset(20)
-        }
+        
+        NSLayoutConstraint.activate([
+            titleLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 55),
+            descriptionLabel.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            descriptionLabel.widthAnchor.constraint(equalToConstant: 280),
+            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 20)
+        ])
     }
 
     required init?(coder aDecoder: NSCoder) {

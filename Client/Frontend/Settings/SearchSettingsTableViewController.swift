@@ -49,7 +49,7 @@ class SearchSettingsTableViewController: ThemedTableViewController {
         tableView.register(ThemedTableSectionHeaderFooterView.self, forHeaderFooterViewReuseIdentifier: SectionHeaderIdentifier)
 
         // Insert Done button if being presented outside of the Settings Nav stack
-        if !(self.navigationController is ThemedNavigationController) {
+        if !(self.navigationController is DismissableNavigationViewController) {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: .SettingsSearchDoneButton, style: .done, target: self, action: #selector(self.dismissAnimated))
         }
 

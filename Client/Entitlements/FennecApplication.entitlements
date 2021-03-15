@@ -8,11 +8,12 @@
 	<true/>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.org.mozilla.ios.Fennec</string>
+		<string>group.com.q2r5.Fennec</string>
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)org.mozilla.ios.Fennec</string>
+		<string>$(AppIdentifierPrefix)com.q2r5.Fennec</string>
 	</array>
 </dict>
 </plist>

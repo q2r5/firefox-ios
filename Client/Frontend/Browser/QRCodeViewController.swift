@@ -6,6 +6,7 @@ import Foundation
 import AVFoundation
 import SnapKit
 import Shared
+import Sentry
 
 private struct QRCodeViewControllerUX {
     static let navigationBarBackgroundColor = UIColor.black

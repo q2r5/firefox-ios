@@ -28,7 +28,7 @@ private struct ReaderModeStyleViewControllerUX {
 
 // MARK: -
 
-protocol ReaderModeStyleViewControllerDelegate {    
+protocol ReaderModeStyleViewControllerDelegate {
     // isUsingUserDefinedColor should be false by default unless we need to override the default color 
     func readerModeStyleViewController(_ readerModeStyleViewController: ReaderModeStyleViewController, 
                                        didConfigureStyle style: ReaderModeStyle,
@@ -199,7 +199,7 @@ class ReaderModeStyleViewController: UIViewController, NotificationThemeable {
         }
     }
     
-    func applyTheme(_ preferences: Prefs, contentScript: TabContentScript) {        
+    func applyTheme(_ preferences: Prefs, contentScript: TabContentScript) {
         guard let readerPreferences = preferences.dictionaryForKey(ReaderModeProfileKeyStyle),
               let readerMode = contentScript as? ReaderMode,
               var style = ReaderModeStyle(dict: readerPreferences) else { return }

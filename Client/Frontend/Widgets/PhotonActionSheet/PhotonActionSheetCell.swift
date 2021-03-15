@@ -272,8 +272,10 @@ class PhotonActionSheetCell: UITableViewCell {
         case .Switch:
             toggleSwitch.setOn(action.isEnabled)
             stackView.addArrangedSubview(toggleSwitch.mainView)
-        default:
-            break // Do nothing. The rest are not supported yet.
+        case .None:
+            titleLabel.snp.makeConstraints { make in
+                make.top.bottom.equalTo(contentView).inset(10)
+            }
         }
         action.customRender?(titleLabel, contentView)
     }

@@ -98,16 +98,12 @@ class Setting: NSObject {
             }
         }
         cell.accessibilityTraits = UIAccessibilityTraits.button
-        cell.indentationWidth = 0
-        cell.layoutMargins = .zero
 
         let backgroundView = UIView()
         backgroundView.backgroundColor = UIColor.theme.tableView.selectedBackground
         backgroundView.bounds = cell.bounds
         cell.selectedBackgroundView = backgroundView
 
-        // So that the separator line goes all the way to the left edge.
-        cell.separatorInset = .zero
         if let cell = cell as? ThemedTableViewCell {
             cell.applyTheme()
         }
@@ -370,7 +366,7 @@ class StringSetting: Setting, UITextFieldDelegate {
     fileprivate let settingIsValid: ((String?) -> Bool)?
     fileprivate let persister: SettingValuePersister
 
-    let textField = UITextField()
+    let textField: UITextField = .build()
 
     init(defaultValue: String? = nil, placeholder: String, accessibilityIdentifier: String, persister: SettingValuePersister, settingIsValid isValueValid: ((String?) -> Bool)? = nil, settingDidChange: ((String?) -> Void)? = nil) {
         self.defaultValue = defaultValue
@@ -402,11 +398,11 @@ class StringSetting: Setting, UITextFieldDelegate {
 
         textField.font = DynamicFontHelper.defaultHelper.DefaultStandardFont
 
-        textField.snp.makeConstraints { make in
-            make.height.equalTo(44)
-            make.trailing.equalTo(cell.contentView).offset(-Padding)
-            make.leading.equalTo(cell.contentView).offset(Padding)
-        }
+        NSLayoutConstraint.activate([
+            textField.heightAnchor.constraint(equalToConstant: 44),
+            textField.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -Padding),
+            textField.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: Padding)
+        ])
         if let value = self.persister.readPersistedValue() {
             textField.text = value
             textFieldDidChange(textField)
@@ -541,16 +537,19 @@ class ButtonSetting: Setting {
     override func onConfigureCell(_ cell: UITableViewCell) {
         super.onConfigureCell(cell)
 
+        guard let textLabel = cell.textLabel else { return }
+
         if isEnabled?() ?? true {
-            cell.textLabel?.textColor = destructive ? UIColor.theme.general.destructiveRed : UIColor.theme.general.highlightBlue
+            textLabel.textColor = destructive ? UIColor.theme.general.destructiveRed : UIColor.theme.general.highlightBlue
         } else {
-            cell.textLabel?.textColor = UIColor.theme.tableView.disabledRowText
+            textLabel.textColor = UIColor.theme.tableView.disabledRowText
         }
-        cell.textLabel?.snp.makeConstraints({ make in
-            make.height.equalTo(44)
-            make.trailing.equalTo(cell.contentView).offset(-Padding)
-            make.leading.equalTo(cell.contentView).offset(Padding)
-        })
+        textLabel.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            textLabel.heightAnchor.constraint(equalToConstant: 44),
+            textLabel.trailingAnchor.constraint(equalTo: cell.contentView.trailingAnchor, constant: -Padding),
+            textLabel.leadingAnchor.constraint(equalTo: cell.contentView.leadingAnchor, constant: Padding)
+        ])
         cell.textLabel?.textAlignment = .center
         cell.accessibilityTraits = UIAccessibilityTraits.button
         cell.selectionStyle = .none

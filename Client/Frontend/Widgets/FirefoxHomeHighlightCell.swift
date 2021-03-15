@@ -8,60 +8,48 @@ import Storage
 
 private struct FirefoxHomeHighlightCellUX {
     static let BorderWidth: CGFloat = 0.5
-    static let CellSideOffset = 20
-    static let TitleLabelOffset = 2
-    static let CellTopBottomOffset = 12
-    static let SiteImageViewSize = CGSize(width: 99, height: UIDevice.current.userInterfaceIdiom == .pad ? 120 : 90)
+    static let SiteImageViewSize = CGSize(width: 99, height: UIDevice.current.userInterfaceIdiom == .pad ? 120 : 100)
     static let StatusIconSize = 12
     static let FaviconSize = CGSize(width: 45, height: 45)
     static let SelectedOverlayColor = UIColor(white: 0.0, alpha: 0.25)
     static let CornerRadius: CGFloat = 8
-    static let BorderColor = UIColor.Photon.Grey30
 }
 
 class FirefoxHomeHighlightCell: UICollectionViewCell, NotificationThemeable {
 
-    fileprivate lazy var titleLabel: UILabel = {
-        let titleLabel = UILabel()
-        titleLabel.font = UIFont.preferredFont(forTextStyle: .headline)
+    private let titleLabel: UILabel = .build { titleLabel in
+        titleLabel.font = UIFont.preferredFont(forTextStyle: .subheadline)
         titleLabel.textAlignment = .left
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.numberOfLines = 3
-        return titleLabel
-    }()
+    }
 
-    fileprivate lazy var domainLabel: UILabel = {
-        let descriptionLabel = UILabel()
+    private let domainLabel: UILabel = .build { descriptionLabel in
         descriptionLabel.font = UIFont.preferredFont(forTextStyle: .caption1)
         descriptionLabel.textAlignment = .left
         descriptionLabel.numberOfLines = 1
         descriptionLabel.setContentCompressionResistancePriority(UILayoutPriority(rawValue: 1000), for: .vertical)
-        return descriptionLabel
-    }()
-    
-    lazy var imageWrapperView: UIView = {
-        let view = UIView()
+        descriptionLabel.adjustsFontForContentSizeCategory = true
+    }
+
+    private let imageWrapperView: UIView = .build { view in
         view.layer.cornerRadius = FirefoxHomeHighlightCellUX.CornerRadius
         view.layer.shadowOffset = CGSize(width: 0, height: 2)
         view.layer.shadowRadius = 6
-        return view
-    }()
+    }
 
-    lazy var siteImageView: UIImageView = {
-        let siteImageView = UIImageView()
-        siteImageView.contentMode = .scaleAspectFit
+    private let siteImageView: UIImageView = .build { siteImageView in
+        siteImageView.contentMode = .scaleAspectFill
         siteImageView.clipsToBounds = true
         siteImageView.contentMode = .center
         siteImageView.layer.cornerRadius = FirefoxHomeHighlightCellUX.CornerRadius
         siteImageView.layer.masksToBounds = true
-        return siteImageView
-    }()
+    }
 
-    fileprivate lazy var selectedOverlay: UIView = {
-        let selectedOverlay = UIView()
+    private let selectedOverlay: UIView = .build { selectedOverlay in
         selectedOverlay.backgroundColor = FirefoxHomeHighlightCellUX.SelectedOverlayColor
         selectedOverlay.isHidden = true
-        return selectedOverlay
-    }()
+    }
 
     override var isSelected: Bool {
         didSet {
@@ -83,33 +71,28 @@ class FirefoxHomeHighlightCell: UICollectionViewCell, NotificationThemeable {
         contentView.addSubview(titleLabel)
         contentView.addSubview(domainLabel)
 
-        siteImageView.snp.makeConstraints { make in
-            make.edges.equalTo(imageWrapperView)
-        }
-
-        imageWrapperView.snp.makeConstraints { make in
-            make.top.equalTo(contentView)
-            make.leading.equalTo(contentView.safeArea.leading)
-            make.trailing.equalTo(contentView.safeArea.trailing)
-            make.centerX.equalTo(contentView)
-            make.height.equalTo(FirefoxHomeHighlightCellUX.SiteImageViewSize)
-        }
-
-        selectedOverlay.snp.makeConstraints { make in
-            make.edges.equalTo(contentView.safeArea.edges)
-        }
-
-        domainLabel.snp.makeConstraints { make in
-            make.leading.equalTo(siteImageView)
-            make.trailing.equalTo(contentView.safeArea.trailing)
-            make.top.equalTo(siteImageView.snp.bottom).offset(5)
-        }
-
-        titleLabel.snp.makeConstraints { make in
-            make.leading.equalTo(siteImageView)
-            make.trailing.equalTo(contentView.safeArea.trailing)
-            make.top.equalTo(domainLabel.snp.bottom).offset(5)
-        }
+        NSLayoutConstraint.activate([
+            imageWrapperView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            imageWrapperView.leadingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.leadingAnchor),
+            imageWrapperView.trailingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.trailingAnchor),
+            imageWrapperView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            imageWrapperView.widthAnchor.constraint(equalToConstant: FirefoxHomeHighlightCellUX.SiteImageViewSize.width),
+            imageWrapperView.heightAnchor.constraint(equalToConstant: FirefoxHomeHighlightCellUX.SiteImageViewSize.height),
+            siteImageView.leadingAnchor.constraint(equalTo: imageWrapperView.leadingAnchor),
+            siteImageView.trailingAnchor.constraint(equalTo: imageWrapperView.trailingAnchor),
+            siteImageView.topAnchor.constraint(equalTo: imageWrapperView.topAnchor),
+            siteImageView.bottomAnchor.constraint(equalTo: imageWrapperView.bottomAnchor),
+            selectedOverlay.leadingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.leadingAnchor),
+            selectedOverlay.trailingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.trailingAnchor),
+            selectedOverlay.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor),
+            selectedOverlay.bottomAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.bottomAnchor),
+            domainLabel.leadingAnchor.constraint(equalTo: siteImageView.leadingAnchor),
+            domainLabel.trailingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.trailingAnchor),
+            domainLabel.topAnchor.constraint(equalTo: siteImageView.bottomAnchor, constant: 8),
+            titleLabel.leadingAnchor.constraint(equalTo: siteImageView.leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.trailingAnchor),
+            titleLabel.topAnchor.constraint(equalTo: domainLabel.bottomAnchor, constant: 5)
+        ])
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -134,7 +117,7 @@ class FirefoxHomeHighlightCell: UICollectionViewCell, NotificationThemeable {
     }
 
     func applyTheme() {
-        titleLabel.textColor = UIColor.theme.homePanel.activityStreamHeaderText
+        titleLabel.textColor = UIColor.theme.homePanel.activityStreamCellTitle
         domainLabel.textColor = UIColor.theme.homePanel.activityStreamCellDescription
         imageWrapperView.layer.shadowColor = UIColor.theme.homePanel.shortcutShadowColor
         imageWrapperView.layer.shadowOpacity = UIColor.theme.homePanel.shortcutShadowOpacity

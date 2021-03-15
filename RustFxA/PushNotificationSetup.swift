@@ -4,7 +4,7 @@
 
 import Shared
 import SwiftKeychainWrapper
-import MozillaAppServices
+import FxAClient
 
 open class PushNotificationSetup {
     private var pushClient: PushClient?

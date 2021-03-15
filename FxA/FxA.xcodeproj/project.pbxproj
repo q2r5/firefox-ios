@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 53;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -16,7 +16,6 @@
 		0A80BCD61EC538F500926C6A /* ece in Resources */ = {isa = PBXBuildFile; fileRef = 0A80BCD41EC538F500926C6A /* ece */; };
 		0A80BCD71EC538F500926C6A /* ece.h in Headers */ = {isa = PBXBuildFile; fileRef = 0A80BCD51EC538F500926C6A /* ece.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		28F9520119D0F9FA00DCE892 /* FxA.h in Headers */ = {isa = PBXBuildFile; fileRef = 28F9520019D0F9FA00DCE892 /* FxA.h */; settings = {ATTRIBUTES = (Public, ); }; };
-		28F9520B19D0F9FB00DCE892 /* FxATests.m in Sources */ = {isa = PBXBuildFile; fileRef = 28F9520A19D0F9FB00DCE892 /* FxATests.m */; };
 		2FA17FD219D3D32300F3D844 /* aes.h in Headers */ = {isa = PBXBuildFile; fileRef = 2FA17F8219D3D32300F3D844 /* aes.h */; };
 		2FA17FD319D3D32300F3D844 /* asn1.h in Headers */ = {isa = PBXBuildFile; fileRef = 2FA17F8319D3D32300F3D844 /* asn1.h */; };
 		2FA17FD419D3D32300F3D844 /* asn1_mac.h in Headers */ = {isa = PBXBuildFile; fileRef = 2FA17F8419D3D32300F3D844 /* asn1_mac.h */; };
@@ -117,16 +116,6 @@
 		E63320461EC2052100F2BC80 /* libssl.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2FA17FD119D3D32300F3D844 /* libssl.a */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		28F9521819D0FCA000DCE892 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 28F951F219D0F9FA00DCE892 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 28F951FA19D0F9FA00DCE892;
-			remoteInfo = FxA;
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXFileReference section */
 		0A80BCC81EC538DD00926C6A /* base64url.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = base64url.c; path = ../ThirdParty/ecec/src/base64url.c; sourceTree = "<group>"; };
 		0A80BCC91EC538DD00926C6A /* decrypt.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = decrypt.c; path = ../ThirdParty/ecec/src/decrypt.c; sourceTree = "<group>"; };
@@ -139,7 +128,6 @@
 		28F951FB19D0F9FA00DCE892 /* FxA.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = FxA.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		28F951FF19D0F9FA00DCE892 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		28F9520019D0F9FA00DCE892 /* FxA.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FxA.h; sourceTree = "<group>"; };
-		28F9520619D0F9FB00DCE892 /* FxATests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FxATests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		28F9520919D0F9FB00DCE892 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		28F9520A19D0F9FB00DCE892 /* FxATests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = FxATests.m; sourceTree = "<group>"; };
 		2FA17F8219D3D32300F3D844 /* aes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = aes.h; sourceTree = "<group>"; };
@@ -259,13 +247,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		28F9520319D0F9FB00DCE892 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -290,7 +271,6 @@
 			isa = PBXGroup;
 			children = (
 				28F951FB19D0F9FA00DCE892 /* FxA.framework */,
-				28F9520619D0F9FB00DCE892 /* FxATests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -574,42 +554,19 @@
 			productReference = 28F951FB19D0F9FA00DCE892 /* FxA.framework */;
 			productType = "com.apple.product-type.framework";
 		};
-		28F9520519D0F9FB00DCE892 /* FxATests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 28F9521119D0F9FB00DCE892 /* Build configuration list for PBXNativeTarget "FxATests" */;
-			buildPhases = (
-				28F9520219D0F9FB00DCE892 /* Sources */,
-				28F9520319D0F9FB00DCE892 /* Frameworks */,
-				28F9520419D0F9FB00DCE892 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				28F9521919D0FCA000DCE892 /* PBXTargetDependency */,
-			);
-			name = FxATests;
-			productName = FxATests;
-			productReference = 28F9520619D0F9FB00DCE892 /* FxATests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		28F951F219D0F9FA00DCE892 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				BuildIndependentTargetsInParallel = YES;
 				LastSwiftMigration = 0700;
 				LastUpgradeCheck = 1020;
 				ORGANIZATIONNAME = Mozilla;
 				TargetAttributes = {
 					28F951FA19D0F9FA00DCE892 = {
 						CreatedOnToolsVersion = 6.0.1;
-						LastSwiftMigration = 0820;
-						ProvisioningStyle = Manual;
-					};
-					28F9520519D0F9FB00DCE892 = {
-						CreatedOnToolsVersion = 6.0.1;
-						DevelopmentTeam = 43AQ936H96;
 						LastSwiftMigration = 0820;
 						ProvisioningStyle = Manual;
 					};
@@ -621,7 +578,6 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
-				Base,
 			);
 			mainGroup = 28F951F119D0F9FA00DCE892;
 			productRefGroup = 28F951FC19D0F9FA00DCE892 /* Products */;
@@ -629,7 +585,6 @@
 			projectRoot = "";
 			targets = (
 				28F951FA19D0F9FA00DCE892 /* FxA */,
-				28F9520519D0F9FB00DCE892 /* FxATests */,
 			);
 		};
 /* End PBXProject section */
@@ -640,13 +595,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				0A80BCD61EC538F500926C6A /* ece in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		28F9520419D0F9FB00DCE892 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -679,51 +627,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		28F9520219D0F9FB00DCE892 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				28F9520B19D0F9FB00DCE892 /* FxATests.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		28F9521919D0FCA000DCE892 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 28F951FA19D0F9FA00DCE892 /* FxA */;
-			targetProxy = 28F9521819D0FCA000DCE892 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		28F9520C19D0F9FB00DCE892 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -735,13 +645,6 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -753,6 +656,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
@@ -770,11 +674,16 @@
 				);
 				INFOPLIST_FILE = FxA/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/FxA/lib",
 				);
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.mozilla.ios.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -784,73 +693,15 @@
 			};
 			name = Debug;
 		};
-		28F9521219D0F9FB00DCE892 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_STYLE = Manual;
-				DEVELOPMENT_TEAM = 43AQ936H96;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-				);
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
-					"$(PROJECT_DIR)/FxA/include",
-				);
-				INFOPLIST_FILE = FxATests/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/FxA/lib";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.mozilla.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_VERSION = 3.0;
-			};
-			name = Debug;
-		};
 		E60222DF1C6E56C10061C436 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_MODULES = YES;
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_COMMA = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
-				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INFINITE_RECURSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
-				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
-				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
-				CLANG_WARN_STRICT_PROTOTYPES = YES;
-				CLANG_WARN_SUSPICIOUS_MOVE = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_IDENTITY = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_NO_COMMON_BLOCKS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
-				GCC_WARN_UNUSED_FUNCTION = YES;
-				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 8.2;
-				MTL_ENABLE_DEBUG_INFO = NO;
 				ONLY_ACTIVE_ARCH = NO;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -862,6 +713,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLICATION_EXTENSION_API_ONLY = YES;
+				BUILD_LIBRARY_FOR_DISTRIBUTION = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
 				CURRENT_PROJECT_VERSION = 1;
 				DEFINES_MODULE = YES;
@@ -879,42 +731,22 @@
 				);
 				INFOPLIST_FILE = FxA/Info.plist;
 				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
 					"$(PROJECT_DIR)/FxA/lib",
 				);
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = "org.mozilla.ios.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_VERSION = 3.0;
 				USER_HEADER_SEARCH_PATHS = "";
 				VERSIONING_SYSTEM = "apple-generic";
-			};
-			name = Release;
-		};
-		E60222E11C6E56C10061C436 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CODE_SIGN_STYLE = Manual;
-				DEVELOPMENT_TEAM = 43AQ936H96;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(SDKROOT)/Developer/Library/Frameworks",
-					"$(inherited)",
-				);
-				HEADER_SEARCH_PATHS = (
-					"$(inherited)",
-					/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include,
-					"$(PROJECT_DIR)/FxA/include",
-				);
-				INFOPLIST_FILE = FxATests/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/FxA/lib";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.mozilla.$(PRODUCT_NAME:rfc1034identifier)";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = "";
-				SWIFT_VERSION = 3.0;
 			};
 			name = Release;
 		};
@@ -935,15 +767,6 @@
 			buildConfigurations = (
 				28F9520F19D0F9FB00DCE892 /* Debug */,
 				E60222E01C6E56C10061C436 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		28F9521119D0F9FB00DCE892 /* Build configuration list for PBXNativeTarget "FxATests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				28F9521219D0F9FB00DCE892 /* Debug */,
-				E60222E11C6E56C10061C436 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import UIKit
-import SnapKit
 import Shared
 
 protocol TabToolbarProtocol: AnyObject {
@@ -34,6 +33,7 @@ protocol TabToolbarDelegate: AnyObject {
     func tabToolbarDidLongPressForward(_ tabToolbar: TabToolbarProtocol, button: UIButton)
     func tabToolbarDidPressReload(_ tabToolbar: TabToolbarProtocol, button: UIButton)
     func tabToolbarDidLongPressReload(_ tabToolbar: TabToolbarProtocol, button: UIButton)
+    func tabToolbarReloadContextMenu(_ suggested: [UIMenuElement]?) -> UIMenu?
     func tabToolbarDidPressStop(_ tabToolbar: TabToolbarProtocol, button: UIButton)
     func tabToolbarDidPressHome(_ tabToolbar: TabToolbarProtocol, button: UIButton)
     func tabToolbarDidPressMenu(_ tabToolbar: TabToolbarProtocol, button: UIButton)
@@ -112,10 +112,15 @@ open class TabToolbarHelper: NSObject {
         }
         toolbar.multiStateButton.accessibilityLabel = .TabToolbarReloadAccessibilityLabel
         
-        let longPressMultiStateButton = UILongPressGestureRecognizer(target: self, action: #selector(didLongPressMultiStateButton))
-        toolbar.multiStateButton.addGestureRecognizer(longPressMultiStateButton)
-
-        toolbar.multiStateButton.addTarget(self, action: #selector(didPressMultiStateButton), for: .touchUpInside)
+        if #available(iOS 13, *) {
+            let contextMenuMultiStateButton = UIContextMenuInteraction(delegate: self)
+            toolbar.multiStateButton.addInteraction(contextMenuMultiStateButton)
+            toolbar.multiStateButton.addTarget(self, action: #selector(didPressMultiStateButton), for: .touchUpInside)
+        } else {
+            let longPressMultiStateButton = UILongPressGestureRecognizer(target: self, action: #selector(didLongPressMultiStateButton))
+            toolbar.multiStateButton.addGestureRecognizer(longPressMultiStateButton)
+            toolbar.multiStateButton.addTarget(self, action: #selector(didPressMultiStateButton), for: .touchUpInside)
+        }
 
         toolbar.tabsButton.addTarget(self, action: #selector(didClickTabs), for: .touchUpInside)
         let longPressGestureTabsButton = UILongPressGestureRecognizer(target: self, action: #selector(didLongPressTabs))
@@ -209,52 +214,74 @@ open class TabToolbarHelper: NSObject {
     
     func didLongPressMultiStateButton(_ recognizer: UILongPressGestureRecognizer) {
         switch middleButtonState {
-        case .search:
-            return
-        default:
+        case .stop, .reload:
             if recognizer.state == .began {
                 toolbar.tabToolbarDelegate?.tabToolbarDidLongPressReload(toolbar, button: toolbar.multiStateButton)
             }
+        default:
+            return
         }
     }
 }
 
+extension TabToolbarHelper: UIContextMenuInteractionDelegate {
+    public func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
+        if toolbar.multiStateButton.point(inside: location, with: nil) {
+            switch middleButtonState {
+            case .stop, .reload:
+                return UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: toolbar.tabToolbarDelegate?.tabToolbarReloadContextMenu)
+            default:
+                return nil
+            }
+        }
+        return nil
+    }
+}
+
 class ToolbarButton: UIButton {
-    var selectedTintColor: UIColor!
-    var unselectedTintColor: UIColor!
-    var disabledTintColor = UIColor.Photon.Grey50
+    var selectedTintColor: UIColor! {
+        didSet {
+            setNeedsUpdateConfiguration()
+        }
+    }
+    var unselectedTintColor: UIColor! {
+        didSet {
+            setNeedsUpdateConfiguration()
+        }
+    }
+    var disabledTintColor = UIColor.Photon.Grey50 {
+        didSet {
+            setNeedsUpdateConfiguration()
+        }
+    }
 
     // Optionally can associate a separator line that hide/shows along with the button
     weak var separatorLine: UIView?
 
+    convenience init() {
+        self.init(frame: .zero)
+    }
+
     override init(frame: CGRect) {
         super.init(frame: frame)
-        adjustsImageWhenHighlighted = false
         selectedTintColor = tintColor
         unselectedTintColor = tintColor
         imageView?.contentMode = .scaleAspectFit
+        configuration = .plain()
+        configuration?.imageColorTransformer = UIConfigurationColorTransformer { [unowned self] _ -> UIColor in
+            switch state {
+            case .selected, .highlighted:
+                return selectedTintColor
+            case .disabled:
+                return disabledTintColor
+            default:
+                return unselectedTintColor
+            }
+        }
     }
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    override open var isHighlighted: Bool {
-        didSet {
-            self.tintColor = isHighlighted ? selectedTintColor : unselectedTintColor
-        }
-    }
-
-    override open var isEnabled: Bool {
-        didSet {
-            self.tintColor = isEnabled ? unselectedTintColor : disabledTintColor
-        }
-    }
-
-    override var tintColor: UIColor! {
-        didSet {
-            self.imageView?.tintColor = self.tintColor
-        }
     }
 
     override var isHidden: Bool {
@@ -269,8 +296,6 @@ extension ToolbarButton: NotificationThemeable {
         selectedTintColor = UIColor.theme.toolbarButton.selectedTint
         disabledTintColor = UIColor.theme.toolbarButton.disabledTint
         unselectedTintColor = UIColor.theme.browser.tint
-        tintColor = isEnabled ? unselectedTintColor : disabledTintColor
-        imageView?.tintColor = tintColor
     }
 }
 
@@ -288,16 +313,19 @@ class TabToolbar: UIView {
 
     fileprivate let privateModeBadge = BadgeWithBackdrop(imageName: "privateModeBadge", backdropCircleColor: UIColor.Defaults.MobilePrivatePurple)
     fileprivate let appMenuBadge = BadgeWithBackdrop(imageName: "menuBadge")
-    fileprivate let warningMenuBadge = BadgeWithBackdrop(imageName: "menuWarning", imageMask: "warning-mask")
+    fileprivate let warningMenuBadge = BadgeWithBackdrop(imageName: "menuWarning", imageMask: "warning-mask", imageTint: .Photon.Yellow60)
 
+    private let lineLayer = CALayer()
     var helper: TabToolbarHelper?
     private let contentView = UIStackView()
 
     fileprivate override init(frame: CGRect) {
         actionButtons = [backButton, forwardButton, multiStateButton, addNewTabButton, tabsButton, appMenuButton]
+        actionButtons.forEach { $0.translatesAutoresizingMaskIntoConstraints = false }
         super.init(frame: frame)
         setupAccessibility()
 
+        contentView.translatesAutoresizingMaskIntoConstraints = false
         addSubview(contentView)
         helper = TabToolbarHelper(toolbar: self)
         addButtons(actionButtons)
@@ -305,6 +333,9 @@ class TabToolbar: UIView {
         privateModeBadge.add(toParent: contentView)
         appMenuBadge.add(toParent: contentView)
         warningMenuBadge.add(toParent: contentView)
+
+        lineLayer.backgroundColor = UIColor.black.withAlphaComponent(0.05).cgColor
+        layer.addSublayer(lineLayer)
 
         contentView.axis = .horizontal
         contentView.distribution = .fillEqually
@@ -315,11 +346,18 @@ class TabToolbar: UIView {
         appMenuBadge.layout(onButton: appMenuButton)
         warningMenuBadge.layout(onButton: appMenuButton)
 
-        contentView.snp.makeConstraints { make in
-            make.leading.trailing.top.equalTo(self)
-            make.bottom.equalTo(self.safeArea.bottom)
-        }
+        NSLayoutConstraint.activate([
+            contentView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            contentView.topAnchor.constraint(equalTo: self.topAnchor),
+            contentView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: self.safeAreaLayoutGuide.bottomAnchor)
+        ])
         super.updateConstraints()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        lineLayer.frame = CGRect(origin: .zero, size: CGSize(width: bounds.width, height: 1))
     }
 
     private func setupAccessibility() {
@@ -329,6 +367,7 @@ class TabToolbar: UIView {
         tabsButton.accessibilityIdentifier = "TabToolbar.tabsButton"
         addNewTabButton.accessibilityIdentifier = "TabToolbar.addNewTabButton"
         appMenuButton.accessibilityIdentifier = AccessibilityIdentifiers.BottomToolbar.settingsMenuButton
+        homeButton.accessibilityIdentifier = "TabToolbar.homeButton"
         accessibilityNavigationStyle = .combined
         accessibilityLabel = .TabToolbarNavigationToolbarAccessibilityLabel
     }
@@ -339,20 +378,6 @@ class TabToolbar: UIView {
 
     func addButtons(_ buttons: [UIButton]) {
         buttons.forEach { contentView.addArrangedSubview($0) }
-    }
-
-    override func draw(_ rect: CGRect) {
-        if let context = UIGraphicsGetCurrentContext() {
-            drawLine(context, start: .zero, end: CGPoint(x: frame.width, y: 0))
-        }
-    }
-
-    fileprivate func drawLine(_ context: CGContext, start: CGPoint, end: CGPoint) {
-        context.setStrokeColor(UIColor.black.withAlphaComponent(0.05).cgColor)
-        context.setLineWidth(2)
-        context.move(to: CGPoint(x: start.x, y: start.y))
-        context.addLine(to: CGPoint(x: end.x, y: end.y))
-        context.strokePath()
     }
 }
 

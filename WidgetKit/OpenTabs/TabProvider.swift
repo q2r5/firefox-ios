@@ -12,10 +12,10 @@ struct TabProvider: TimelineProvider {
     var tabsDict: [String: SimpleTab] = [:]
     
     func placeholder(in context: Context) -> OpenTabsEntry {
-        OpenTabsEntry(date: Date(), favicons: [String: Image](), tabs: [])
+        OpenTabsEntry(date: Date(), favicons: [:], tabs: [])
     }
     
-    func getSnapshot(in context: Context, completion: @escaping (OpenTabsEntry) -> Void) {
+    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
         let allOpenTabs = SiteArchiver.tabsToRestore(tabsStateArchivePath: tabsStateArchivePath()).1
 
         let openTabs = allOpenTabs.values.filter {
@@ -44,7 +44,7 @@ struct TabProvider: TimelineProvider {
         return image
     }
     
-    func getTimeline(in context: Context, completion: @escaping (Timeline<OpenTabsEntry>) -> Void) {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
         getSnapshot(in: context, completion: { openTabsEntry in
             let timeline = Timeline(entries: [openTabsEntry], policy: .atEnd)
             completion(timeline)

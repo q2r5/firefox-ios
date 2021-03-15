@@ -3,9 +3,10 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import Foundation
-import MozillaAppServices
+import Nimbus
 import Shared
 import XCGLogger
+import Sentry
 
 private let log = Logger.browserLogger
 private let nimbusAppName = "firefox_ios"

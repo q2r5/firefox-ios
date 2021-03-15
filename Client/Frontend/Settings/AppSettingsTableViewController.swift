@@ -25,7 +25,7 @@ class AppSettingsTableViewController: SettingsTableViewController, FeatureFlagsP
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             title: .AppSettingsDone,
             style: .done,
-            target: navigationController, action: #selector((navigationController as! ThemedNavigationController).done))
+            target: self, action: #selector(dismissVC))
         navigationItem.rightBarButtonItem?.accessibilityIdentifier = "AppSettingsTableViewController.navigationItem.leftBarButtonItem"
 
         tableView.accessibilityIdentifier = "AppSettingsTableViewController.tableView"

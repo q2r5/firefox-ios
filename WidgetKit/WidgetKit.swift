@@ -14,6 +14,7 @@ struct FirefoxWidgets: WidgetBundle {
         SearchQuickLinksWidget()
         OpenTabsWidget()
         TopSitesWidget()
+//        PocketWidget()
     }
 }
 #endif

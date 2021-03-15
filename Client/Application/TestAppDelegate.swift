@@ -45,7 +45,7 @@ class TestAppDelegate: AppDelegate {
                 let enumerator = FileManager.default.enumerator(atPath: dirForTestProfile)
                 let filePaths = enumerator?.allObjects as! [String]
                 filePaths.filter { $0.contains(".db") }.forEach { item in
-                    try! FileManager.default.removeItem(at: URL(fileURLWithPath: "\(dirForTestProfile)/\(item)"))
+                    try? FileManager.default.removeItem(at: URL(fileURLWithPath: "\(dirForTestProfile)/\(item)"))
                 }
 
                 try! FileManager.default.copyItem(at: input, to: output)
@@ -173,7 +173,7 @@ class TestAppDelegate: AppDelegate {
 
     override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Speed up the animations to 100 times as fast.
-        defer { application.keyWindow?.layer.speed = 100.0 }
+        defer { UIWindow.keyWindow?.layer.speed = 100.0 }
         return super.application(application, didFinishLaunchingWithOptions: launchOptions)
     }
 

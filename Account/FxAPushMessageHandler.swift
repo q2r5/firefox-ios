@@ -3,8 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import Shared
-import SwiftyJSON
-import SyncTelemetry
 import Account
 import SwiftKeychainWrapper
 import os.log

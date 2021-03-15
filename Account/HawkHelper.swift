@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import Foundation
-
 import Shared
 
 open class HawkHelper {
@@ -58,7 +57,7 @@ open class HawkHelper {
     }
 
     class func getSignatureFor(_ input: Data, key: Data) -> String {
-        return input.hmacSha256WithKey(key).base64EncodedString
+        return input.HMACSHA256WithKey(key).base64EncodedString
     }
 
     class func getRequestStringFor(_ request: URLRequest, timestampString: String, nonce: String, hash: String, extra: String) -> String {

@@ -4,6 +4,7 @@
 
 import Foundation
 import Shared
+import ObjcExceptionBridging
 import XCGLogger
 import SwiftyJSON
 

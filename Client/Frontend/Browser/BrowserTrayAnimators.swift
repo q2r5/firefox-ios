@@ -86,7 +86,7 @@ private extension TrayToBrowserAnimator {
             if !UIAccessibility.isReduceMotionEnabled {
                 frameResizeClosure()
             }
-            UIApplication.shared.windows.first?.backgroundColor = UIColor.theme.browser.background
+            bvc.view.window?.backgroundColor = UIColor.theme.browser.background
             tabTray.navigationController?.setNeedsStatusBarAppearanceUpdate()
             tabCollectionViewSnapshot.alpha = 0
         }, completion: { finished in
@@ -189,7 +189,7 @@ private extension BrowserToTrayAnimator {
                 animations: {
                 cell.title.transform = .identity
 
-                UIApplication.shared.windows.first?.backgroundColor = UIColor.theme.tabTray.background
+                bvc.view.window?.backgroundColor = UIColor.theme.tabTray.background
                 tabTray.navigationController?.setNeedsStatusBarAppearanceUpdate()
 
                 bvc.urlBar.updateAlphaForSubviews(0)

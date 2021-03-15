@@ -72,7 +72,17 @@ class CredentialListViewController: UIViewController, CredentialListViewProtocol
         super.viewDidLoad()
         setNeedsStatusBarAppearanceUpdate()
         styleNavigationBar()
-        addViewConstraints()
+        
+        view.addSubview(tableView)
+        
+        NSLayoutConstraint.activate([
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            cancelButton.widthAnchor.constraint(equalToConstant: 60)
+        ])
+        
         registerCells()
     }
     
@@ -121,19 +131,6 @@ class CredentialListViewController: UIViewController, CredentialListViewProtocol
         }
         UITextField.appearance(whenContainedInInstancesOf: [UISearchBar.self]).attributedPlaceholder = NSAttributedString(string: .LoginsListSearchPlaceholderCredential, attributes: [:]) // Set the placeholder text and color
         return searchController
-        
-    }
-    
-    private func addViewConstraints() {
-        view.addSubview(tableView)
-        tableView.snp.makeConstraints { make in
-            make.edges.equalTo(self.view)
-        }
-        
-        cancelButton.snp.makeConstraints { make in
-            make.width.equalTo(60)
-        }
-        
     }
     
     private func registerCells() {

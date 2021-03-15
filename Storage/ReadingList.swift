@@ -22,7 +22,7 @@ public protocol ReadingList {
     @discardableResult func updateRecord(_ record: ReadingListItem, unread: Bool) -> Deferred<Maybe<ReadingListItem>>
 }
 
-public struct ReadingListItem: Equatable {
+public struct ReadingListItem {
     public let id: Int
     public let lastModified: Timestamp
     public let url: String
@@ -45,14 +45,16 @@ public struct ReadingListItem: Equatable {
     }
 }
 
-public func ==(lhs: ReadingListItem, rhs: ReadingListItem) -> Bool {
-    return lhs.id == rhs.id
-        && lhs.lastModified == rhs.lastModified
-        && lhs.url == rhs.url
-        && lhs.title == rhs.title
-        && lhs.addedBy == rhs.addedBy
-        && lhs.unread == rhs.unread
-        && lhs.archived == rhs.archived
-        && lhs.favorite == rhs.favorite
+extension ReadingListItem: Equatable {
+    public static func ==(lhs: ReadingListItem, rhs: ReadingListItem) -> Bool {
+        return lhs.id == rhs.id
+            && lhs.lastModified == rhs.lastModified
+            && lhs.url == rhs.url
+            && lhs.title == rhs.title
+            && lhs.addedBy == rhs.addedBy
+            && lhs.unread == rhs.unread
+            && lhs.archived == rhs.archived
+            && lhs.favorite == rhs.favorite
+    }
 }
 

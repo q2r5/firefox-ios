@@ -22,11 +22,15 @@ class SendToDevice: DevicePickerViewControllerDelegate, InstructionsViewControll
         return devicePickerViewController
     }
 
+    func instructionsViewDidRequestToSignIn() {
+
+    }
+
     func finish() {
         delegate?.finish(afterDelay: 0)
     }
 
-    func devicePickerViewController(_ devicePickerViewController: DevicePickerViewController, didPickDevices devices: [RemoteDevice]) {
+    func devicePickerViewController(_ devicePickerViewController: DevicePicker, didPickDevices devices: [RemoteDevice]) {
         guard let item = sharedItem else {
             return finish()
         }
@@ -40,7 +44,7 @@ class SendToDevice: DevicePickerViewControllerDelegate, InstructionsViewControll
         }
     }
 
-    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePickerViewController) {
+    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePicker) {
         finish()
     }
 

@@ -60,6 +60,8 @@ class DownloadsPanel: UIViewController, UITableViewDelegate, UITableViewDataSour
 
         // Set an empty footer to prevent empty cells from appearing in the list.
         tableView.tableFooterView = UIView()
+
+        tableView.sectionHeaderTopPadding = 0
     }
     
 
@@ -83,7 +85,11 @@ class DownloadsPanel: UIViewController, UITableViewDelegate, UITableViewDataSour
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        (navigationController as? ThemedNavigationController)?.applyTheme()
+        if let navigationController = navigationController as? ThemedNavigationController {
+            navigationController.applyTheme()
+        } else {
+            applyTheme()
+        }
     }
 
     override func viewDidLoad() {
@@ -207,28 +213,24 @@ class DownloadsPanel: UIViewController, UITableViewDelegate, UITableViewDataSour
     }
 
     private func roundRectImageWithLabel(_ label: String, width: CGFloat, height: CGFloat, radius: CGFloat = 5.0, strokeWidth: CGFloat = 1.0, strokeColor: UIColor = UIColor.theme.homePanel.downloadedFileIcon, fontSize: CGFloat = 9.0) -> UIImage? {
-        UIGraphicsBeginImageContextWithOptions(CGSize(width: width, height: height), false, 0.0)
-        let context = UIGraphicsGetCurrentContext()
-        context?.setStrokeColor(strokeColor.cgColor)
 
-        let rect = CGRect(x: strokeWidth / 2, y: strokeWidth / 2, width: width - strokeWidth, height: height - strokeWidth)
-        let bezierPath = UIBezierPath(roundedRect: rect, cornerRadius: radius)
-        bezierPath.lineWidth = strokeWidth
-        bezierPath.stroke()
+        return UIGraphicsImageRenderer(size: CGSize(width: width, height: height)).image { ctx in
+            ctx.cgContext.setStrokeColor(strokeColor.cgColor)
 
-        let attributedString = NSAttributedString(string: label, attributes: [
-            .baselineOffset: -(strokeWidth * 2),
-            .font: UIFont.systemFont(ofSize: fontSize),
-            .foregroundColor: strokeColor
-            ])
-        let stringHeight: CGFloat = fontSize * 2
-        let stringWidth = attributedString.boundingRect(with: CGSize(width: width, height: stringHeight), options: .usesLineFragmentOrigin, context: nil).size.width
-        attributedString.draw(at: CGPoint(x: (width - stringWidth) / 2 + strokeWidth, y: (height - stringHeight) / 2 + strokeWidth))
+            let rect = CGRect(x: strokeWidth / 2, y: strokeWidth / 2, width: width - strokeWidth, height: height - strokeWidth)
+            let bezierPath = UIBezierPath(roundedRect: rect, cornerRadius: radius)
+            bezierPath.lineWidth = strokeWidth
+            bezierPath.stroke()
 
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
-
-        return image
+            let attributedString = NSAttributedString(string: label, attributes: [
+                .baselineOffset: -(strokeWidth * 2),
+                .font: UIFont.systemFont(ofSize: fontSize),
+                .foregroundColor: strokeColor
+                ])
+            let stringHeight: CGFloat = fontSize * 2
+            let stringWidth = attributedString.boundingRect(with: CGSize(width: width, height: stringHeight), options: .usesLineFragmentOrigin, context: nil).size.width
+            attributedString.draw(at: CGPoint(x: (width - stringWidth) / 2 + strokeWidth, y: (height - stringHeight) / 2 + strokeWidth))
+        }
     }
 
     // MARK: - Empty State
@@ -383,10 +385,10 @@ class DownloadsPanel: UIViewController, UITableViewDelegate, UITableViewDataSour
         // Intentionally blank. Required to use UITableViewRowActions
     }
 
-    func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
         let deleteTitle: String = .DownloadsPanelDeleteTitle
         let shareTitle: String = .DownloadsPanelShareTitle
-        let delete = UITableViewRowAction(style: .destructive, title: deleteTitle, handler: { (action, indexPath) in
+        let delete = UIContextualAction(style: .destructive, title: deleteTitle, handler: { (action, _, _) in
             if let downloadedFile = self.downloadedFileForIndexPath(indexPath) {
                 if self.deleteDownloadedFile(downloadedFile) {
                     self.tableView.beginUpdates()
@@ -398,14 +400,14 @@ class DownloadsPanel: UIViewController, UITableViewDelegate, UITableViewDataSour
                 }
             }
         })
-        let share = UITableViewRowAction(style: .normal, title: shareTitle, handler: { (action, indexPath) in
+        let share = UIContextualAction(style: .normal, title: shareTitle) { (action, _, _) in
             if let downloadedFile = self.downloadedFileForIndexPath(indexPath) {
                 self.shareDownloadedFile(downloadedFile, indexPath: indexPath)
                 TelemetryWrapper.recordEvent(category: .action, method: .share, object: .download, value: .downloadsPanel)
             }
-        })
+        }
         share.backgroundColor = view.tintColor
-        return [delete, share]
+        return UISwipeActionsConfiguration(actions: [delete, share])
     }
     // MARK: - UIDocumentInteractionControllerDelegate
 

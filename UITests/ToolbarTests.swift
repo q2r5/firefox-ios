@@ -4,6 +4,7 @@
 
 import WebKit
 import UIKit
+import KIF
 
 class ToolbarTests: KIFTestCase, UITextFieldDelegate {
     fileprivate var webRoot: String!
@@ -25,7 +26,7 @@ class ToolbarTests: KIFTestCase, UITextFieldDelegate {
         let url = "\(localhostURL)/numberedPage.html?page=1"
 
         // URL without "http://".
-        let displayURL = "\(localhostURL)/numberedPage.html?page=1".substring(from: url.index(url.startIndex, offsetBy: "http://".count))
+        let displayURL = String("\(localhostURL)/numberedPage.html?page=1"[url.index(url.startIndex, offsetBy: "http://".count)...])
 
         BrowserUtils.enterUrlAddressBar(tester(), typeUrl: url)
 

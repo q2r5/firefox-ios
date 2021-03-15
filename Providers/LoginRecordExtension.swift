@@ -16,7 +16,7 @@ extension LoginRecord {
     }
 }
 
-extension LoginRecord: Comparable {
+extension LoginRecord {
     public static func < (lhs: LoginRecord, rhs: LoginRecord) -> Bool {
         lhs.hostname.titleFromHostname < rhs.hostname.titleFromHostname
     }

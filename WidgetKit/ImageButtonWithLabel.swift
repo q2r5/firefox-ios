@@ -103,8 +103,8 @@ struct ImageButtonWithLabel: View {
                         }
                     }
                 }
-                .foregroundColor(Color("widgetLabelColors"))
-                .padding([.horizontal,.vertical], paddingValue)
+                .foregroundColor(.white)
+                .padding(.all, paddingValue)
             }
         }
     }

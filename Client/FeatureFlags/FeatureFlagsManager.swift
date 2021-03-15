@@ -25,6 +25,7 @@ enum FeatureFlagName: String, CaseIterable {
     case pocket
     case pullToRefresh
     case recentlySaved
+    case recentlyVisited
     case shakeToRestore
     case startAtHome
     case reportSiteIssue
@@ -155,6 +156,11 @@ class FeatureFlagsManager {
                                              and: profile,
                                              enabledFor: [.beta, .developer])
         features[.recentlySaved] = recentlySaved
+
+        let recentlyVisited = FlaggableFeature(withID: .recentlyVisited,
+                                               and: profile,
+                                               enabledFor: [.beta, .developer])
+        features[.recentlyVisited] = recentlyVisited
 
         let shakeToRestore = FlaggableFeature(withID: .shakeToRestore,
                                               and: profile,

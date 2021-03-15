@@ -24,8 +24,8 @@ class FindInPageTests: BaseTestCase {
         waitForNoExistence(app.staticTexts["Fennec pasted from XCUITests-Runner"])
         waitForExistence(app.buttons["TabLocationView.pageOptionsButton"], timeout: 15)
         app.buttons["TabLocationView.pageOptionsButton"].tap()
-        waitForExistence(app.tables["Context Menu"].cells["menu-FindInPage"], timeout: 10)
-        app.tables["Context Menu"].cells["menu-FindInPage"].tap()
+        waitForExistence(app.tables["Context Menu"].cells["search"], timeout: 10)
+        app.tables["Context Menu"].cells["search"].tap()
 
         // Enter some text to start finding
         app.textFields["FindInPage.searchField"].typeText("Book")
@@ -88,7 +88,7 @@ class FindInPageTests: BaseTestCase {
         waitForExistence(app/*@START_MENU_TOKEN@*/.buttons["TabLocationView.pageOptionsButton"]/*[[".buttons[\"Page Options Menu\"]",".buttons[\"TabLocationView.pageOptionsButton\"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/, timeout: 15)
         app/*@START_MENU_TOKEN@*/.buttons["TabLocationView.pageOptionsButton"]/*[[".buttons[\"Page Options Menu\"]",".buttons[\"TabLocationView.pageOptionsButton\"]"],[[[-1,1],[-1,0]]],[0]]@END_MENU_TOKEN@*/.tap()
         // Enter some text to start finding
-        app.tables["Context Menu"].cells["menu-FindInPage"].tap()
+        app.tables["Context Menu"].cells["search"].tap()
         app.textFields["FindInPage.searchField"].typeText("The Book of")
         waitForExistence(app.textFields["The Book of"], timeout: 15)
         XCTAssertEqual(app.staticTexts["FindInPage.matchCount"].label, "1/500+", "The book word count does match")

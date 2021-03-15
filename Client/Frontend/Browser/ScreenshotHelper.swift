@@ -5,6 +5,7 @@
 import Foundation
 import Shared
 import WebKit
+import Sentry
 
 /**
  * Handles screenshots for a given tab, including pages with non-webview content.

@@ -44,7 +44,7 @@ extension UIImage {
     public func createScaled(_ size: CGSize) -> UIImage {
         UIGraphicsImageRenderer(size: size).image { (ctx) in
             draw(in: CGRect(size: size))
-        }
+        }.withRenderingMode(self.renderingMode)
     }
 
     public static func templateImageNamed(_ name: String) -> UIImage? {

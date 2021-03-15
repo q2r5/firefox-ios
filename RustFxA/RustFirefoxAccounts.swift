@@ -2,14 +2,17 @@
 * License, v. 2.0. If a copy of the MPL was not distributed with this
 * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+import UIKit
 import Shared
-import MozillaAppServices
+import Sentry
+import FxAClient
+import Viaduct
 import SwiftKeychainWrapper
 
 let PendingAccountDisconnectedKey = "PendingAccountDisconnect"
 
 // Used to ignore unknown classes when de-archiving
-final class Unknown: NSObject, NSCoding {
+final class Unknown: NSObject, NSCoding, Codable {
     func encode(with coder: NSCoder) {}
     init(coder aDecoder: NSCoder) {
         super.init()
@@ -126,19 +129,11 @@ open class RustFirefoxAccounts {
         }
 
         let config: FxAConfig
-        let useCustom = prefs?.boolForKey(PrefsKeys.KeyUseCustomFxAContentServer) ?? false || prefs?.boolForKey(PrefsKeys.KeyUseCustomSyncTokenServerOverride) ?? false
-        if useCustom {
-            let contentUrl: String
-            if prefs?.boolForKey(PrefsKeys.KeyUseCustomFxAContentServer) ?? false, let url = prefs?.stringForKey(PrefsKeys.KeyCustomFxAContentServer) {
-                contentUrl = url
-            } else {
-                contentUrl = "https://stable.dev.lcip.org"
-            }
-
-            let tokenServer = prefs?.boolForKey(PrefsKeys.KeyUseCustomSyncTokenServerOverride) ?? false ? prefs?.stringForKey(PrefsKeys.KeyCustomSyncTokenServerOverride) : nil
+        let tokenServer = prefs?.boolForKey(PrefsKeys.KeyUseCustomSyncTokenServerOverride) ?? false ? prefs?.stringForKey(PrefsKeys.KeyCustomSyncTokenServerOverride) : nil
+        if prefs?.boolForKey(PrefsKeys.KeyUseCustomFxAContentServer) ?? false, let contentUrl = prefs?.stringForKey(PrefsKeys.KeyCustomFxAContentServer) {
             config = FxAConfig(contentUrl: contentUrl, clientId: RustFirefoxAccounts.clientID, redirectUri: RustFirefoxAccounts.redirectURL, tokenServerUrlOverride: tokenServer)
         } else {
-            config = FxAConfig(server: server, clientId: RustFirefoxAccounts.clientID, redirectUri: RustFirefoxAccounts.redirectURL)
+            config = FxAConfig(server: server, clientId: RustFirefoxAccounts.clientID, redirectUri: RustFirefoxAccounts.redirectURL, tokenServerUrlOverride: tokenServer)
         }
 
         let type = UIDevice.current.userInterfaceIdiom == .pad ? DeviceType.tablet : DeviceType.mobile
@@ -209,7 +204,7 @@ open class RustFirefoxAccounts {
             return nil
         }
 
-        guard let json = try? JSONSerialization.jsonObject(with: jsonData, options: .allowFragments) as? [String: Any] else {
+        guard let json = try? JSONSerialization.jsonObject(with: jsonData, options: .fragmentsAllowed) as? [String: Any] else {
             return nil
         }
 
@@ -301,7 +296,7 @@ open class RustFirefoxAccounts {
 }
 
 /**
- Wrap MozillaAppServices.Profile in an easy-to-serialize (and cache) FxAUserProfile.
+ Wrap `FxAClient.Profile` in an easy-to-serialize (and cache) FxAUserProfile.
  Caching of this is required for when the app starts offline.
  */
 public struct FxAUserProfile: Codable, Equatable {
@@ -310,7 +305,7 @@ public struct FxAUserProfile: Codable, Equatable {
     public let avatarUrl: String?
     public let displayName: String?
 
-    init(profile: MozillaAppServices.Profile) {
+    init(profile: FxAClient.Profile) {
         uid = profile.uid
         email = profile.email
         avatarUrl = profile.avatar

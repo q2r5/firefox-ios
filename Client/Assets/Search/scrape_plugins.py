@@ -12,7 +12,7 @@ import os
 import requests
 import shutil
 import subprocess
-import urllib
+import urllib.request, urllib.parse, urllib.error
 
 # Paths for en-US plugins included in the core Android repo.
 EN_PLUGINS_DIR_URL = "https://hg.mozilla.org/releases/mozilla-aurora/file/default/mobile/locales/en-US/searchplugins"
@@ -49,18 +49,18 @@ def main():
     supportedLocales = getSupportedLocales()
     for locale in locales:
         if (locale not in supportedLocales):
-            print("skipping unsupported locale: %s" % locale)
+            print(("skipping unsupported locale: %s" % locale))
             continue
 
         downloadLocale(locale, L10nScraper(locale))
 
     verifyEngines()
 
-def downloadLocale(locale, scraper):
-    print("scraping: %s..." % locale)
+def downloadLocale(locale: str, scraper):
+    print(("scraping: %s..." % locale))
     files = scraper.getFileList()
     if files is None:
-        print("no files for locale: %s" % locale)
+        print(("no files for locale: %s" % locale))
         return
 
     print("  found search plugins")
@@ -71,12 +71,12 @@ def downloadLocale(locale, scraper):
 
     # Get the default search engine for this locale.
     default = scraper.getDefault()
-    print("  default: %s" % default)
+    print(("  default: %s" % default))
     saveDefault(locale, default)
 
     for file in files:
         path = os.path.join(directory, file)
-        print("  downloading: %s..." % file)
+        print(("  downloading: %s..." % file))
         downloadedFile = scraper.getFile(file)
         name, extension = os.path.splitext(file)
 
@@ -87,7 +87,7 @@ def downloadLocale(locale, scraper):
             if overlay:
                 plugin = etree.parse(downloadedFile)
                 overlay.apply(plugin)
-                contents = MOZ_HEADER + etree.tostring(plugin.getroot(), encoding="utf-8", pretty_print=True)
+                contents: str = MOZ_HEADER + etree.tostring(plugin.getroot(), encoding="unicode", pretty_print=True)
                 with open(path, "w") as outfile:
                     outfile.write(contents)
                 continue
@@ -109,7 +109,7 @@ def verifyEngines():
             path = os.path.join(localeDir, engine + ".xml")
             enPath = os.path.join(enDir, engine + ".xml")
             if not os.path.exists(path) and not os.path.exists(enPath):
-                print("  ERROR: missing engine %s for locale %s" % (engine, locale))
+                print(("  ERROR: missing engine %s for locale %s" % (engine, locale)))
 
 def getSupportedLocales():
     supportedLocales = subprocess.Popen("./get_supported_locales.swift", stdout=subprocess.PIPE).communicate()[0]
@@ -121,10 +121,10 @@ def overlayForEngine(engine):
         return None
     return Overlay(path)
 
-def saveDefault(locale, default):
+def saveDefault(locale: str, default: str):
     directory = os.path.join("SearchPlugins", locale, "default.txt")
     file = open(directory, "w")
-    file.write(default.encode("UTF-8"))
+    file.write(default)
 
 
 class Scraper:
@@ -142,7 +142,7 @@ class Scraper:
         return tree.xpath('//a[@class="list"]/text()')
 
     def getFile(self, file):
-        result = urllib.urlretrieve(self.pluginsFileURL % file)
+        result = urllib.request.urlretrieve(self.pluginsFileURL % file)
         return result[0]
 
     def getDefault(self):
@@ -161,7 +161,7 @@ class Scraper:
 
 
 class L10nScraper(Scraper):
-    def __init__(self, locale):
+    def __init__(self, locale: str):
         self.pluginsDirURL = L10N_PLUGINS_DIR_URL % locale
         self.pluginsFileURL = L10N_PLUGINS_FILE_URL % locale
         self.prefsURL = L10N_PREFS_URL % locale

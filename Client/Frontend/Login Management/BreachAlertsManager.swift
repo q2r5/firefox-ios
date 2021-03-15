@@ -2,9 +2,10 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import Foundation
+import UIKit
 import Storage // or whichever module has the LoginsRecord class
 import Shared // or whichever module has the Maybe class
+import Sentry
 
 /// Breach structure decoded from JSON
 struct BreachRecord: Codable, Equatable, Hashable {

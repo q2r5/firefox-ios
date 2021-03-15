@@ -150,11 +150,28 @@ class SearchEngines {
     }
 
     fileprivate lazy var customEngines: [OpenSearchEngine] = {
-        return NSKeyedUnarchiver.unarchiveObject(withFile: self.customEngineFilePath()) as? [OpenSearchEngine] ?? []
+        do {
+            let data = try Data(contentsOf: URL(fileURLWithPath: self.customEngineFilePath()))
+            return try NSKeyedUnarchiver.unarchivedArrayOfObjects(ofClass: OpenSearchEngine.self, from: data) ?? []
+        } catch let error {
+            do {
+                let data = try Data(contentsOf: URL(fileURLWithPath: self.customEngineFilePath()))
+                let unarchiver = try NSKeyedUnarchiver(forReadingFrom: data)
+                unarchiver.requiresSecureCoding = false
+                return try unarchiver.decodeTopLevelObject() as? [OpenSearchEngine] ?? []
+            } catch {
+                return []
+            }
+        }
     }()
 
     fileprivate func saveCustomEngines() {
-        NSKeyedArchiver.archiveRootObject(customEngines, toFile: self.customEngineFilePath())
+        do {
+            let data = try NSKeyedArchiver.archivedData(withRootObject: customEngines, requiringSecureCoding: false)
+            try data.write(to: URL(fileURLWithPath: self.customEngineFilePath()), options: .atomic)
+        } catch let error {
+            fatalError(error.localizedDescription)
+        }
     }
 
     /// Return all possible language identifiers in the order of most specific to least specific.

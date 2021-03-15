@@ -245,7 +245,7 @@ class NavigationTest: BaseTestCase {
         app.textFields["address"].typeText("\n")
         waitUntilPageLoad()
         app.textFields["url"].press(forDuration:3)
-        app.tables.cells["menu-Copy-Link"].tap()
+        app.tables.cells["link"].tap()
         app.textFields["url"].tap()
         // Since the textField value appears all selected first time is clicked
         // this workaround is necessary

@@ -2,9 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import Foundation
 import Shared
-import SnapKit
 import UIKit
 
 class TabMoreMenuViewController: UIViewController, NotificationThemeable {
@@ -22,7 +20,7 @@ class TabMoreMenuViewController: UIViewController, NotificationThemeable {
                                     2: [.CloseTabTitle],
                                     0: [.CopyAddressTitle,
                                         .ShareContextMenuTitle,
-                                        .SendToDeviceTitle]
+                                        .SendLinkToDeviceTitle]
     ]
     let imageViews: [Int: [UIImageView]] = [ 1: [UIImageView(image: UIImage.templateImageNamed("library-readinglist")),
                                                  UIImageView(image: UIImage.templateImageNamed("bookmark")),
@@ -40,34 +38,30 @@ class TabMoreMenuViewController: UIViewController, NotificationThemeable {
         tableView.delegate = self
         tableView.separatorStyle = .none
         tableView.isScrollEnabled = UIDevice.current.orientation.isLandscape ? true : false
+        tableView.translatesAutoresizingMaskIntoConstraints = false
         return tableView
     }()
     
-    lazy var tabMoreMenuHeader: TabMoreMenuHeader = {
-        let header = TabMoreMenuHeader()
-        return header
-    }()
+    let tabMoreMenuHeader: TabMoreMenuHeader = .build()
     
-    lazy var handleView: UIView = {
-        let handleView = UIView()
+    let handleView: UIView = .build { handleView in
         handleView.backgroundColor = .black
         handleView.alpha = DrawerViewControllerUX.HandleAlpha
         handleView.layer.cornerRadius = DrawerViewControllerUX.HandleHeight / 2
-        return handleView
-    }()
+    }
 
-    lazy var divider: UIView = {
-        let divider = UIView()
+    let divider: UIView = .build { divider in
         divider.backgroundColor = UIColor.Photon.Grey30
-        return divider
-    }()
+    }
     
     func applyTheme() {
-        if LegacyThemeManager.instance.currentName == .normal {
-            tabMoreMenuHeader.backgroundColor = UIColor.Photon.Grey10
+        if #available(iOS 13, *) {
+            view.backgroundColor = UIColor.systemGroupedBackground
         } else {
-            tabMoreMenuHeader.backgroundColor = UIColor.Photon.Grey90
+            view.backgroundColor = UIColor.theme.tableView.headerBackground
+            tableView.backgroundColor = UIColor.theme.tableView.headerBackground
         }
+        tabMoreMenuHeader.applyTheme()
     }
     
     @objc func displayThemeChanged() {
@@ -89,7 +83,8 @@ class TabMoreMenuViewController: UIViewController, NotificationThemeable {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.addSubview(handleView)
+        if #available(iOS 15, *) {}
+        else { view.addSubview(handleView) }
         view.addSubview(tableView)
         view.addSubview(tabMoreMenuHeader)
         view.addSubview(divider)
@@ -109,37 +104,33 @@ class TabMoreMenuViewController: UIViewController, NotificationThemeable {
     }
     
     func setupConstraints() {
-        handleView.snp.makeConstraints{ make in
-            make.width.equalTo(DrawerViewControllerUX.HandleWidth)
-            make.height.equalTo(DrawerViewControllerUX.HandleHeight)
-            make.centerX.equalToSuperview()
-            make.top.equalToSuperview().offset((DrawerViewControllerUX.HandleMargin - DrawerViewControllerUX.HandleHeight) / 2)
-        }
-        tabMoreMenuHeader.snp.makeConstraints { make in
-            make.top.equalTo(handleView.snp.bottom)
-            make.bottom.equalTo(divider.snp.top)
-            make.left.right.equalToSuperview()
-        }
-        divider.snp.makeConstraints { make in
-            make.top.equalTo(tabMoreMenuHeader.snp.bottom)
-            make.bottom.equalTo(tableView.snp.top).inset(-20)
-            make.height.equalTo(1)
-            make.width.equalToSuperview()
-        }
-        tableView.snp.makeConstraints { make in
-            make.left.right.equalToSuperview()
-            make.centerX.equalToSuperview()
-            make.bottom.equalTo(self.view.safeArea.bottom).inset(40)
-        }
+        NSLayoutConstraint.activate([
+//            handleView.widthAnchor.constraint(equalToConstant: DrawerViewControllerUX.HandleWidth),
+//            handleView.heightAnchor.constraint(equalToConstant: DrawerViewControllerUX.HandleHeight),
+//            handleView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+//            handleView.topAnchor.constraint(equalTo: view.topAnchor, constant: (DrawerViewControllerUX.HandleMargin - DrawerViewControllerUX.HandleHeight) / 2),
+//            tabMoreMenuHeader.topAnchor.constraint(equalTo: handleView.bottomAnchor),
+            tabMoreMenuHeader.topAnchor.constraint(equalTo: view.topAnchor),
+            tabMoreMenuHeader.bottomAnchor.constraint(equalTo: divider.topAnchor),
+            tabMoreMenuHeader.leftAnchor.constraint(equalTo: view.leftAnchor),
+            tabMoreMenuHeader.rightAnchor.constraint(equalTo: view.rightAnchor),
+            divider.topAnchor.constraint(equalTo: tabMoreMenuHeader.bottomAnchor),
+            divider.bottomAnchor.constraint(equalTo: tableView.topAnchor, constant: -20),
+            divider.heightAnchor.constraint(equalToConstant: 1),
+            divider.widthAnchor.constraint(equalTo: view.widthAnchor),
+            tableView.leftAnchor.constraint(equalTo: view.leftAnchor),
+            tableView.rightAnchor.constraint(equalTo: view.rightAnchor),
+            tableView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: 40)
+        ])
     }
     
     func configure(headerView: TabMoreMenuHeader, tab: Tab? = nil) {
-        guard  let tab = tab else { return }
+        guard let tab = tab else { return }
         let baseDomain = tab.url?.baseDomain
         headerView.descriptionLabel.text = baseDomain != nil ? baseDomain!.contains("local") ? " " : baseDomain : " "
         headerView.titleLabel.text = tab.displayTitle
         headerView.imageView.image = tab.screenshot ?? UIImage()
-        headerView.backgroundColor = UIColor.Photon.Grey10
     }
     
     func dismissMenu() {
@@ -168,7 +159,18 @@ extension TabMoreMenuViewController: UITableViewDataSource {
         cell.backgroundColor = LegacyThemeManager.instance.currentName == .normal ? lightColor : darkColor
         cell.textLabel?.text = titles[indexPath.section]?[indexPath.row]
         cell.accessoryView = imageViews[indexPath.section]?[indexPath.row]
-        cell.accessoryView?.tintColor = UIColor.theme.textField.textAndTint
+
+        if #available(iOS 13.0, *) {
+            cell.backgroundColor = UIColor.secondarySystemGroupedBackground
+            cell.textLabel?.textColor = UIColor.label
+            cell.detailTextLabel?.textColor = UIColor.secondaryLabel
+            cell.accessoryView?.tintColor = UIColor.secondaryLabel
+        } else {
+            cell.backgroundColor = LegacyThemeManager.instance.currentName == .normal ? lightColor : darkColor
+            cell.textLabel?.textColor = UIColor.theme.tableView.rowText
+            cell.detailTextLabel?.textColor = UIColor.theme.tableView.rowDetailText
+            cell.accessoryView?.tintColor = UIColor.theme.tabTray.cellCloseButton
+        }
         
         return cell
     }
@@ -188,7 +190,7 @@ extension TabMoreMenuViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        guard let tab = tab, let url = self.tab?.sessionData?.urls.last ?? self.tab?.url else { return }
+        guard let tab = tab, let url = tab.sessionData?.urls.last ?? tab.url else { return }
         
         switch indexPath.section {
         case 0:

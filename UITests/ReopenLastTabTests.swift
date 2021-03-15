@@ -5,6 +5,7 @@
 import Foundation
 import Storage
 @testable import Client
+import KIF
 // Disabling due to failure in iOS 13/Xcode 11. Investigation requiered
 /*
 class ReopenLastTabTests: KIFTestCase {

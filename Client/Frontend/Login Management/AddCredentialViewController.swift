@@ -18,8 +18,7 @@ enum AddCredentialField: Int {
 
 class AddCredentialViewController: UIViewController {
     
-    fileprivate lazy var tableView: UITableView = {
-        let tableView = UITableView()
+    fileprivate lazy var tableView: UITableView = .build { tableView in
         tableView.separatorColor = UIColor.theme.tableView.separator
         tableView.backgroundColor = UIColor.theme.tableView.headerBackground
         tableView.accessibilityIdentifier = "Add Credential"
@@ -29,8 +28,7 @@ class AddCredentialViewController: UIViewController {
             
         // Add empty footer view to prevent seperators from being drawn past the last item.
         tableView.tableFooterView = UIView()
-        return tableView
-    }()
+    }
     fileprivate weak var websiteField: UITextField!
     fileprivate weak var usernameField: UITextField!
     fileprivate weak var passwordField: UITextField!
@@ -60,9 +58,12 @@ class AddCredentialViewController: UIViewController {
         navigationItem.leftBarButtonItem = cancelButton
 
         view.addSubview(tableView)
-        tableView.snp.makeConstraints { make in
-            make.edges.equalTo(self.view)
-        }
+        NSLayoutConstraint.activate([
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -97,7 +98,7 @@ class AddCredentialViewController: UIViewController {
     }
     
     @objc func cancel() {
-        self.dismiss(animated: true)
+        dismiss(animated: true)
     }
     
     /// Normalize the website entered by adding `https://` URL scheme. This format is necessary in ordered to be saved on local passwords storage.
@@ -158,16 +159,6 @@ extension AddCredentialViewController: UITableViewDataSource {
         return loginCell
     }
 
-    fileprivate func wrapFooter(_ footer: UITableViewHeaderFooterView, withCellFromTableView tableView: UITableView, atIndexPath indexPath: IndexPath) -> UITableViewCell {
-        let cell = self.cell(forIndexPath: indexPath)
-        cell.selectionStyle = .none
-        cell.addSubview(footer)
-        footer.snp.makeConstraints { make in
-            make.edges.equalTo(cell)
-        }
-        return cell
-    }
-
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return 3
     }
@@ -212,7 +203,7 @@ extension AddCredentialViewController: LoginDetailTableViewCellDelegate {
         saveButton.isEnabled = enableSave
     }
     
-    func canPeform(action: Selector, for cell: LoginDetailTableViewCell) -> Bool {
+    func canPerform(action: Selector, for cell: LoginDetailTableViewCell) -> Bool {
         guard let item = infoItemForCell(cell) else {
             return false
         }

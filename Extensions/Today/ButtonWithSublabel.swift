@@ -3,10 +3,22 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import UIKit
+import SnapKit
 
 class ButtonWithSublabel: UIButton {
-    lazy var subLabel = UILabel()
-    lazy var label = UILabel()
+    lazy var subLabel: UILabel = {
+        let label = UILabel()
+        label.lineBreakMode = .byTruncatingTail
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    lazy var label: UILabel = {
+        let label = UILabel()
+        label.numberOfLines = 2
+        label.lineBreakMode = .byWordWrapping
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -28,6 +40,7 @@ class ButtonWithSublabel: UIButton {
         addSubview(self.subLabel)
         buttonImage.adjustsImageSizeForAccessibilityContentSizeCategory = true
         buttonImage.contentMode = .scaleAspectFit
+        buttonImage.translatesAutoresizingMaskIntoConstraints = false
         
         buttonImage.snp.makeConstraints { make in
             make.left.centerY.equalTo(10)
@@ -37,10 +50,9 @@ class ButtonWithSublabel: UIButton {
             make.left.equalTo(buttonImage.snp.right).offset(10)
             make.trailing.top.equalTo(self)
         }
-        self.label.numberOfLines = 2
-        self.label.lineBreakMode = .byWordWrapping
+        
         label.sizeToFit()
-        self.subLabel.lineBreakMode = .byTruncatingTail
+        
         self.subLabel.snp.makeConstraints { make in
             make.bottom.equalTo(self).inset(10)
             make.top.equalTo(self.label.snp.bottom)

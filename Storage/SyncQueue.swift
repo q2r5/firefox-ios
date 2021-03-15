@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import Shared
-import SwiftyJSON
 
 public struct SyncCommand: Equatable {
     public let value: String
@@ -41,16 +40,16 @@ public struct SyncCommand: Equatable {
             "command": "displayURI",
             "args": [shareItem.url, sender, shareItem.title ?? ""]
         ]
-        return SyncCommand(value: JSON(jsonObj).stringify()!)
+        return SyncCommand(value: jsonObj.asString!)
     }
 
     public func withClientGUID(_ clientGUID: String?) -> SyncCommand {
         return SyncCommand(id: self.commandID, value: self.value, clientGUID: clientGUID)
     }
-}
 
-public func ==(lhs: SyncCommand, rhs: SyncCommand) -> Bool {
-    return lhs.value == rhs.value
+    public static func ==(lhs: SyncCommand, rhs: SyncCommand) -> Bool {
+        return lhs.value == rhs.value
+    }
 }
 
 public protocol SyncCommands {

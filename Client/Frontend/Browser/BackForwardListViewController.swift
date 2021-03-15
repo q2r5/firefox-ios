@@ -22,8 +22,7 @@ class BackForwardListViewController: UIViewController, UITableViewDataSource, UI
     fileprivate var currentRow = 0
     fileprivate var verticalConstraints: [Constraint] = []
 
-    lazy var tableView: UITableView = {
-        let tableView = UITableView()
+    lazy var tableView: UITableView = .build { tableView in
         tableView.separatorStyle = .none
         tableView.dataSource = self
         tableView.delegate = self
@@ -33,15 +32,11 @@ class BackForwardListViewController: UIViewController, UITableViewDataSource, UI
         let blurEffect = UIBlurEffect(style: UIColor.theme.tabTray.tabTitleBlur)
         let blurEffectView = UIVisualEffectView(effect: blurEffect)
         tableView.backgroundView = blurEffectView
+    }
 
-        return tableView
-    }()
-
-    lazy var shadow: UIView = {
-        let shadow = UIView()
+    lazy var shadow: UIView = .build { shadow in
         shadow.backgroundColor = UIColor(white: 0, alpha: 0.2)
-        return shadow
-    }()
+    }
 
     var tabManager: TabManager!
     weak var bvc: BrowserViewController?
@@ -187,7 +182,7 @@ class BackForwardListViewController: UIViewController, UITableViewDataSource, UI
             if snappedToBottom {
                 verticalConstraints += [make.bottom.equalTo(self.view).offset(-bvc.footer.frame.height).constraint]
             } else {
-                verticalConstraints += [make.top.equalTo(self.view).offset(bvc.header.frame.height + UIApplication.shared.statusBarFrame.size.height).constraint]
+                verticalConstraints += [make.top.equalTo(self.view).offset(((UIApplication.shared.delegate as? AppDelegate)?.window?.windowScene?.statusBarManager?.statusBarFrame.size.height ?? 0)).constraint]
             }
         }
         shadow.snp.makeConstraints() { make in

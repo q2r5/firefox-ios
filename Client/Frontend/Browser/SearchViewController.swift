@@ -5,7 +5,7 @@
 import UIKit
 import Shared
 import Storage
-import MozillaAppServices
+import Nimbus
 import Telemetry
 
 private enum SearchListSection: Int, CaseIterable {
@@ -88,10 +88,6 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
         self.tabManager = tabManager
         self.experimental = Experiments.shared.getVariables(featureId: .search).getVariables("awesome-bar")
         super.init(profile: profile)
-        
-        if #available(iOS 15.0, *) {
-            tableView.sectionHeaderTopPadding = 0
-        }
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -230,7 +226,7 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
 
         //search settings icon
         let searchButton = UIButton()
-        searchButton.setImage(UIImage(named: "quickSearch"), for: [])
+        searchButton.setImage(UIImage(named: "quickSearch"), for: .normal)
         searchButton.imageView?.contentMode = .center
         searchButton.layer.backgroundColor = SearchViewControllerUX.EngineButtonBackgroundColor
         searchButton.addTarget(self, action: #selector(didClickSearchButton), for: .touchUpInside)
@@ -291,7 +287,6 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
             return
         }
 
-        Telemetry.default.recordSearch(location: .quickSearch, searchEngine: engine.engineID ?? "other")
         GleanMetrics.Search.counts["\(engine.engineID ?? "custom").\(SearchesMeasurement.SearchLocation.quickSearch.rawValue)"].add()
 
         searchDelegate?.searchViewController(self, didSelectURL: url, searchTerm: "")
@@ -305,8 +300,7 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
         animateSearchEnginesWithKeyboard(state)
     }
 
-    func keyboardHelper(_ keyboardHelper: KeyboardHelper, keyboardDidShowWithState state: KeyboardState) {
-    }
+    func keyboardHelper(_ keyboardHelper: KeyboardHelper, keyboardDidShowWithState state: KeyboardState) { }
 
     func keyboardHelper(_ keyboardHelper: KeyboardHelper, keyboardWillHideWithState state: KeyboardState) {
         animateSearchEnginesWithKeyboard(state)
@@ -324,8 +318,8 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
     fileprivate func animateSearchEnginesWithKeyboard(_ keyboardState: KeyboardState) {
         layoutSearchEngineScrollView()
 
-        UIView.animate(withDuration: keyboardState.animationDuration, animations: {
-            UIView.setAnimationCurve(keyboardState.animationCurve)
+        UIView.animate(withDuration: keyboardState.animationDuration, delay: 0,
+                       options: [UIView.AnimationOptions(rawValue: UInt(keyboardState.animationCurve.rawValue << 16))], animations: {
             self.view.layoutIfNeeded()
         })
     }
@@ -489,10 +483,6 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
         }
     }
 
-    override func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return super.tableView(tableView, heightForRowAt: indexPath)
-    }
-
     override func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         return 0
     }
@@ -610,7 +600,6 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
         case .bookmarksAndHistory:
             if let site = data[indexPath.row] {
                 let isBookmark = site.bookmarked ?? false
-                cell = twoLineCell
                 twoLineCell.descriptionLabel.isHidden = false
                 twoLineCell.titleLabel.text = site.title
                 twoLineCell.descriptionLabel.text = site.url

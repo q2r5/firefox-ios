@@ -7,16 +7,16 @@ import WidgetKit
 import SwiftUI
 
 struct Provider: TimelineProvider {
-    func placeholder(in context: Context) -> SimpleEntry {
+    func placeholder(in context: Context) -> Entry {
         return SimpleEntry(date: Date())
     }
     
-    func getSnapshot(in context: Context, completion: @escaping (SimpleEntry) -> Void) {
+    func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
         let entry = SimpleEntry(date: Date())
         completion(entry)
     }
     
-    func getTimeline(in context: Context, completion: @escaping (Timeline<SimpleEntry>) -> Void) {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
         let entries = [SimpleEntry(date: Date())]
         let timeline = Timeline(entries: entries, policy: .atEnd)
         completion(timeline)
@@ -51,7 +51,7 @@ struct SearchQuickLinksWidget: Widget {
     private let kind: String = "Quick Actions - Medium"
 
     public var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: Provider()) { entry in
+        StaticConfiguration(kind: kind, provider: Provider()) { _ in
             SearchQuickLinksEntryView()
         }
         .supportedFamilies([.systemMedium])

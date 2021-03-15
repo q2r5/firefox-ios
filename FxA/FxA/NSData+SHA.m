@@ -14,14 +14,14 @@
 - (NSData*) SHA1Hash
 {
     unsigned char md[CC_SHA1_DIGEST_LENGTH];
-    CC_SHA1([self bytes], [self length], md);
+    CC_SHA1([self bytes], (unsigned int)[self length], md);
     return [NSData dataWithBytes: md length: CC_SHA1_DIGEST_LENGTH];
 }
 
 - (NSData*) SHA256Hash
 {
     unsigned char md[CC_SHA256_DIGEST_LENGTH];
-    CC_SHA256([self bytes], [self length], md);
+    CC_SHA256([self bytes], (unsigned int)[self length], md);
     return [NSData dataWithBytes: md length: CC_SHA256_DIGEST_LENGTH];
 }
 

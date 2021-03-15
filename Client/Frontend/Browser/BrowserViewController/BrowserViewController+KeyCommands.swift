@@ -7,54 +7,54 @@ import Shared
 // Naming functions: use the suffix 'KeyCommand' for an additional level of namespacing (bug 1415830)
 extension BrowserViewController {
 
-    @objc private func reloadTabKeyCommand() {
+    @objc public func reloadTabKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "reload"])
         if let tab = tabManager.selectedTab, firefoxHomeViewController == nil {
             tab.reload()
         }
     }
 
-    @objc private func goBackKeyCommand() {
+    @objc public func goBackKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "go-back"])
         if let tab = tabManager.selectedTab, tab.canGoBack, firefoxHomeViewController == nil {
             tab.goBack()
         }
     }
 
-    @objc private func goForwardKeyCommand() {
+    @objc public func goForwardKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "go-forward"])
         if let tab = tabManager.selectedTab, tab.canGoForward {
             tab.goForward()
         }
     }
 
-    @objc private func findInPageKeyCommand() {
+    @objc public func findInPageKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "find-in-page"])
         if let tab = tabManager.selectedTab, firefoxHomeViewController == nil {
             self.tab(tab, didSelectFindInPageForSelection: "")
         }
     }
 
-    @objc private func selectLocationBarKeyCommand() {
+    @objc public func selectLocationBarKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "select-location-bar"])
         scrollController.showToolbars(animated: true)
         urlBar.tabLocationViewDidTapLocation(urlBar.locationView)
     }
 
-    @objc private func newTabKeyCommand() {
+    @objc public func newTabKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "new-tab"])
         let isPrivate = tabManager.selectedTab?.isPrivate ?? false
         openBlankNewTab(focusLocationField: true, isPrivate: isPrivate)
     }
 
-    @objc private func newPrivateTabKeyCommand() {
+    @objc public func newPrivateTabKeyCommand() {
         // NOTE: We cannot and should not distinguish between "new-tab" and "new-private-tab"
         // when recording telemetry for key commands.
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "new-tab"])
         openBlankNewTab(focusLocationField: true, isPrivate: true)
     }
 
-    @objc private func closeTabKeyCommand() {
+    @objc public func closeTabKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "close-tab"])
         guard let currentTab = tabManager.selectedTab else {
             return
@@ -62,7 +62,7 @@ extension BrowserViewController {
         tabManager.removeTabAndUpdateSelectedIndex(currentTab)
     }
 
-    @objc private func nextTabKeyCommand() {
+    @objc public func nextTabKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "next-tab"])
         guard let currentTab = tabManager.selectedTab else {
             return
@@ -76,7 +76,7 @@ extension BrowserViewController {
         }
     }
 
-    @objc private func previousTabKeyCommand() {
+    @objc public func previousTabKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "previous-tab"])
         guard let currentTab = tabManager.selectedTab else {
             return
@@ -90,17 +90,45 @@ extension BrowserViewController {
         }
     }
 
-    @objc private func showTabTrayKeyCommand() {
+    @objc public func showTabTrayKeyCommand() {
         TelemetryWrapper.recordEvent(category: .action, method: .press, object: .keyCommand, extras: ["action": "show-tab-tray"])
         showTabTray()
     }
 
-    @objc private func moveURLCompletionKeyCommand(sender: UIKeyCommand) {
+    @objc public func moveURLCompletionKeyCommand(sender: UIKeyCommand) {
         guard let searchController = self.searchController else {
             return
         }
 
         searchController.handleKeyCommands(sender: sender)
+    }
+
+    override func buildMenu(with builder: UIMenuBuilder) {
+        super.buildMenu(with: builder)
+
+        guard builder.system == .main else { return }
+        let newPrivateTab = UICommandAlternate(title: .NewPrivateTabTitle, action: #selector(newPrivateTabKeyCommand), modifierFlags: [.shift])
+
+        let fileMenu = UIMenu(options: .displayInline, children: [
+            UIKeyCommand(title: .ReloadPageTitle, action: #selector(reloadTabKeyCommand), input: "r", modifierFlags: .command, discoverabilityTitle: .ReloadPageTitle),
+            UIKeyCommand(title: .NewTabTitle, action: #selector(newTabKeyCommand), input: "t", modifierFlags: .command, alternates: [newPrivateTab], discoverabilityTitle: .NewTabTitle),
+            UIKeyCommand(title: .NewPrivateTabTitle, action: #selector(newPrivateTabKeyCommand), input: "p", modifierFlags: [.command, .shift], discoverabilityTitle: .NewPrivateTabTitle),
+            UIKeyCommand(title: .CloseTabTitle, action: #selector(closeTabKeyCommand), input: "w", modifierFlags: .command, discoverabilityTitle: .CloseTabTitle),
+        ])
+
+        let editMenu = UIMenu(options: .displayInline, children: [
+            UIKeyCommand(title: .FindTitle, action: #selector(findInPageKeyCommand), input: "f", modifierFlags: .command, discoverabilityTitle: .FindTitle),
+        ])
+
+        let viewMenu = UIMenu(options: .displayInline, children: [
+            UIKeyCommand(title: .ShowNextTabTitle, action: #selector(nextTabKeyCommand), input: "\t", modifierFlags: .control, discoverabilityTitle: .ShowNextTabTitle),
+            UIKeyCommand(title: .ShowPreviousTabTitle, action: #selector(previousTabKeyCommand), input: "\t", modifierFlags: [.control, .shift], discoverabilityTitle: .ShowPreviousTabTitle),
+            UIKeyCommand(title: .ShowTabTrayFromTabKeyCodeTitle, action: #selector(showTabTrayKeyCommand), input: "\t", modifierFlags: [.command, .alternate], discoverabilityTitle: .ShowTabTrayFromTabKeyCodeTitle)
+        ])
+
+        builder.insertChild(fileMenu, atStartOfMenu: .file)
+        builder.insertChild(editMenu, atStartOfMenu: .edit)
+        builder.insertChild(viewMenu, atStartOfMenu: .view)
     }
 
     override var keyCommands: [UIKeyCommand]? {
@@ -115,24 +143,16 @@ extension BrowserViewController {
             UIKeyCommand(input: UIKeyCommand.inputRightArrow, modifierFlags: .command, action: #selector(goForwardKeyCommand)),
         ]
         let tabNavigation = [
-            UIKeyCommand(action: #selector(reloadTabKeyCommand), input: "r", modifierFlags: .command, discoverabilityTitle: .ReloadPageTitle),
-            UIKeyCommand(action: #selector(goBackKeyCommand), input: "[", modifierFlags: .command, discoverabilityTitle: .BackTitle),
-            UIKeyCommand(action: #selector(goForwardKeyCommand), input: "]", modifierFlags: .command, discoverabilityTitle: .ForwardTitle),
-            UIKeyCommand(action: #selector(findInPageKeyCommand), input: "f", modifierFlags: .command, discoverabilityTitle: .FindTitle),
-            UIKeyCommand(action: #selector(selectLocationBarKeyCommand), input: "l", modifierFlags: .command, discoverabilityTitle: .SelectLocationBarTitle),
-            UIKeyCommand(action: #selector(newTabKeyCommand), input: "t", modifierFlags: .command, discoverabilityTitle: .NewTabTitle),
-            UIKeyCommand(action: #selector(newPrivateTabKeyCommand), input: "p", modifierFlags: [.command, .shift], discoverabilityTitle: .NewPrivateTabTitle),
-            UIKeyCommand(action: #selector(closeTabKeyCommand), input: "w", modifierFlags: .command, discoverabilityTitle: .CloseTabTitle),
-            UIKeyCommand(action: #selector(nextTabKeyCommand), input: "\t", modifierFlags: .control, discoverabilityTitle: .ShowNextTabTitle),
-            UIKeyCommand(action: #selector(previousTabKeyCommand), input: "\t", modifierFlags: [.control, .shift],  discoverabilityTitle: .ShowPreviousTabTitle),
+            UIKeyCommand(title: .BackTitle, action: #selector(goBackKeyCommand), input: "[", modifierFlags: .command, discoverabilityTitle: .BackTitle),
+            UIKeyCommand(title: .ForwardTitle, action: #selector(goForwardKeyCommand), input: "]", modifierFlags: .command, discoverabilityTitle: .ForwardTitle),
+
+            UIKeyCommand(title: .SelectLocationBarTitle, action: #selector(selectLocationBarKeyCommand), input: "l", modifierFlags: .command, discoverabilityTitle: .SelectLocationBarTitle),
 
             // Switch tab to match Safari on iOS.
             UIKeyCommand(input: "]", modifierFlags: [.command, .shift], action: #selector(nextTabKeyCommand)),
             UIKeyCommand(input: "[", modifierFlags: [.command, .shift], action: #selector(previousTabKeyCommand)),
 
             UIKeyCommand(input: "\\", modifierFlags: [.command, .shift], action: #selector(showTabTrayKeyCommand)), // Safari on macOS
-            UIKeyCommand(action: #selector(showTabTrayKeyCommand), input: "\t", modifierFlags: [.command, .alternate], discoverabilityTitle: .ShowTabTrayFromTabKeyCodeTitle)
-
         ]
 
         let isEditingText = tabManager.selectedTab?.isEditing ?? false

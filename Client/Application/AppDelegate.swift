@@ -16,6 +16,7 @@ import Sync
 import CoreSpotlight
 import UserNotifications
 import Account
+import Sentry
 
 #if canImport(BackgroundTasks)
  import BackgroundTasks
@@ -30,9 +31,7 @@ private let InitialPingSentKey = "initialPingSent"
 class AppDelegate: UIResponder, UIApplicationDelegate {
 
     var window: UIWindow?
-    var browserViewController: BrowserViewController!
     var tabTrayController: GridTabViewController!
-    var rootViewController: UIViewController!
     weak var profile: Profile?
     var tabManager: TabManager!
     var applicationCleanlyBackgrounded = true
@@ -65,8 +64,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Hold references to willFinishLaunching parameters for delayed app launch
         self.application = application
         self.launchOptions = launchOptions
-
-        self.window = UIWindow(frame: UIScreen.main.bounds)
 
         // If the 'Save logs to Files app on next launch' toggle
         // is turned on in the Settings app, copy over old logs.
@@ -104,7 +101,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         let profile = getProfile(application)
 
         telemetry = TelemetryWrapper(profile: profile)
-        NSUserDefaultsPrefs(prefix: "profile").setBool(true, forKey: "isColdLaunch")
+        profile.prefs.setBool(true, forKey: "isColdLaunch")
         FeatureFlagsManager.shared.initializeFeatures(with: profile)
         ThemeManager.shared.updateProfile(with: profile)
 
@@ -117,31 +114,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
         let imageStore = DiskImageStore(files: profile.files, namespace: "TabManagerScreenshots", quality: UIConstants.ScreenshotQuality)
 
-        // Temporary fix for Bug 1390871 - NSInvalidArgumentException: -[WKContentView menuHelperFindInPage]: unrecognized selector
-        if let clazz = NSClassFromString("WKCont" + "ent" + "View"), let swizzledMethod = class_getInstanceMethod(TabWebViewMenuHelper.self, #selector(TabWebViewMenuHelper.swizzledMenuHelperFindInPage)) {
-            class_addMethod(clazz, MenuHelper.SelectorFindInPage, method_getImplementation(swizzledMethod), method_getTypeEncoding(swizzledMethod))
-        }
-
         self.tabManager = TabManager(profile: profile, imageStore: imageStore)
         self.tabTrayController = GridTabViewController(tabManager: self.tabManager, profile: profile)
-
-        // Add restoration class, the factory that will return the ViewController we
-        // will restore with.
-
-        setupRootViewController()
 
         NotificationCenter.default.addObserver(forName: .FSReadingListAddReadingListItem, object: nil, queue: nil) { (notification) -> Void in
             if let userInfo = notification.userInfo, let url = userInfo["URL"] as? URL {
                 let title = (userInfo["Title"] as? String) ?? ""
                 profile.readingList.createRecordWithURL(url.absoluteString, title: title, addedBy: UIDevice.current.name)
-            }
-        }
-
-        NotificationCenter.default.addObserver(forName: .DisplayThemeChanged, object: nil, queue: .main) { (notification) -> Void in
-            if !LegacyThemeManager.instance.systemThemeIsOn {
-                self.window?.overrideUserInterfaceStyle = LegacyThemeManager.instance.userInterfaceStyle
-            } else {
-                self.window?.overrideUserInterfaceStyle = .unspecified
             }
         }
 
@@ -154,24 +133,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return true
     }
 
-    // TODO: Move to scene controller for iOS 13
-    private func setupRootViewController() {
-        if !LegacyThemeManager.instance.systemThemeIsOn {
-            self.window?.overrideUserInterfaceStyle = LegacyThemeManager.instance.userInterfaceStyle
-        }
-
-        browserViewController = BrowserViewController(profile: self.profile!, tabManager: self.tabManager)
-        browserViewController.edgesForExtendedLayout = []
-
-        let navigationController = UINavigationController(rootViewController: browserViewController)
-        navigationController.delegate = self
-        navigationController.isNavigationBarHidden = true
-        navigationController.edgesForExtendedLayout = UIRectEdge(rawValue: 0)
-        rootViewController = navigationController
-
-        self.window!.rootViewController = rootViewController
-    }
-
     func applicationWillTerminate(_ application: UIApplication) {
         // We have only five seconds here, so let's hope this doesn't take too long.
         profile?._shutdown()
@@ -179,8 +140,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Allow deinitializers to close our database connections.
         profile = nil
         tabManager = nil
-        browserViewController = nil
-        rootViewController = nil
     }
 
     /**
@@ -205,10 +164,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         var shouldPerformAdditionalDelegateHandling = true
-
-        UIScrollView.doBadSwizzleStuff()
-
-        window!.makeKeyAndVisible()
 
         // Now roll logs.
         DispatchQueue.global(qos: DispatchQoS.background.qosClass).async {
@@ -305,26 +260,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         profile?.prefs.setInt(sessionCount + 1, forKey: PrefsKeys.SessionCount)
     }
 
-    func application(_ application: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey: Any] = [:]) -> Bool {
-        guard let routerpath = NavigationPath(url: url) else {
-            return false
-        }
-
-        if let profile = profile, let _ = profile.prefs.boolForKey(PrefsKeys.AppExtensionTelemetryOpenUrl) {
-            profile.prefs.removeObjectForKey(PrefsKeys.AppExtensionTelemetryOpenUrl)
-            var object = TelemetryWrapper.EventObject.url
-            if case .text(_) = routerpath {
-                object = .searchText
-            }
-            TelemetryWrapper.recordEvent(category: .appExtensionAction, method: .applicationOpenUrl, object: object)
-        }
-
-        DispatchQueue.main.async {
-            NavigationPath.handle(nav: routerpath, with: BrowserViewController.foregroundBVC(), tray: self.tabTrayController)
-        }
-        return true
-    }
-
     // We sync in the foreground only, to avoid the possibility of runaway resource usage.
     // Eventually we'll sync in response to notifications.
     func applicationDidBecomeActive(_ application: UIApplication) {
@@ -354,8 +289,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         BrowserViewController.foregroundBVC().firefoxHomeViewController?.reloadAll()
 
         // Resume file downloads.
-        // TODO: iOS 13 needs to iterate all the BVCs.
-        BrowserViewController.foregroundBVC().downloadQueue.resumeAll()
+        for session in application.openSessions {
+            (session.scene?.delegate as? SceneDelegate)?.browserViewController.downloadQueue.resumeAll()
+        }
 
         // handle quick actions is available
         let quickActions = QuickActions.sharedInstance
@@ -391,7 +327,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func applicationWillResignActive(_ application: UIApplication) {
         updateTopSitesWidget()
         UserDefaults.standard.setValue(Date(), forKey: "LastActiveTimestamp")
-        NSUserDefaultsPrefs(prefix: "profile").setBool(false, forKey: "isColdLaunch")
+        self.profile?.prefs.setBool(false, forKey: "isColdLaunch")
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
@@ -405,8 +341,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         defaults.set(true, forKey: "ApplicationCleanlyBackgrounded")
 
         // Pause file downloads.
-        // TODO: iOS 13 needs to iterate all the BVCs.
-        BrowserViewController.foregroundBVC().downloadQueue.pauseAll()
+        for session in application.openSessions {
+            (session.scene?.delegate as? SceneDelegate)?.browserViewController.downloadQueue.pauseAll()
+        }
 
         TelemetryWrapper.recordEvent(category: .action, method: .background, object: .app)
 
@@ -492,50 +429,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         FaviconFetcher.userAgent = UserAgent.desktopUserAgent()
     }
 
-    func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
-        let bvc = BrowserViewController.foregroundBVC()
-        if userActivity.activityType == SiriShortcuts.activityType.openURL.rawValue {
-            bvc.openBlankNewTab(focusLocationField: false)
-            return true
-        }
-
-        // If the `NSUserActivity` has a `webpageURL`, it is either a deep link or an old history item
-        // reached via a "Spotlight" search before we began indexing visited pages via CoreSpotlight.
-        if let url = userActivity.webpageURL {
-            let query = url.getQuery()
-
-            // Check for fxa sign-in code and launch the login screen directly
-            if query["signin"] != nil {
-                // bvc.launchFxAFromDeeplinkURL(url) // Was using Adjust. Consider hooking up again when replacement system in-place.
-                return true
-            }
-
-            // Per Adjust documenation, https://docs.adjust.com/en/universal-links/#running-campaigns-through-universal-links,
-            // it is recommended that links contain the `deep_link` query parameter. This link will also
-            // be url encoded.
-            if let deepLink = query["deep_link"]?.removingPercentEncoding, let url = URL(string: deepLink) {
-                bvc.switchToTabForURLOrOpen(url)
-                return true
-            }
-
-            bvc.switchToTabForURLOrOpen(url)
-            return true
-        }
-
-        // Otherwise, check if the `NSUserActivity` is a CoreSpotlight item and switch to its tab or
-        // open a new one.
-        if userActivity.activityType == CSSearchableItemActionType {
-            if let userInfo = userActivity.userInfo,
-                let urlString = userInfo[CSSearchableItemActivityIdentifier] as? String,
-                let url = URL(string: urlString) {
-                bvc.switchToTabForURLOrOpen(url)
-                return true
-            }
-        }
-
-        return false
-    }
-
     func application(_ application: UIApplication, performActionFor shortcutItem: UIApplicationShortcutItem, completionHandler: @escaping (Bool) -> Void) {
         let handledShortCutItem = QuickActions.sharedInstance.handleShortCutItem(shortcutItem, withBrowserViewController: BrowserViewController.foregroundBVC())
 
@@ -599,6 +492,14 @@ extension UIApplication {
     }
 }
 
+extension AppDelegate {
+    func application(_ application: UIApplication,
+                     configurationForConnecting connectingSceneSession: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        return UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+    }
+}
+
 // Orientation lock for views that use new modal presenter
 extension AppDelegate {
     /// ref: https://stackoverflow.com/questions/28938660/
@@ -617,5 +518,37 @@ extension AppDelegate {
             self.lockOrientation(orientation)
             UIDevice.current.setValue(rotateOrientation.rawValue, forKey: "orientation")
         }
+    }
+}
+
+extension AppDelegate {
+    override func buildMenu(with builder: UIMenuBuilder) {
+        super.buildMenu(with: builder)
+
+        guard builder.system == .main else { return }
+        let newPrivateTab = UICommandAlternate(title: .NewPrivateTabTitle, action: #selector(BrowserViewController.newPrivateTabKeyCommand), modifierFlags: [.shift])
+
+        let fileMenu = UIMenu(options: .displayInline, children: [
+            UIKeyCommand(title: .NewTabTitle, action: #selector(BrowserViewController.newTabKeyCommand), input: "t", modifierFlags: .command, alternates: [newPrivateTab], discoverabilityTitle: .NewTabTitle),
+            UIKeyCommand(title: .NewPrivateTabTitle, action: #selector(BrowserViewController.newPrivateTabKeyCommand), input: "p", modifierFlags: [.command, .shift], discoverabilityTitle: .NewPrivateTabTitle),
+            UIKeyCommand(title: .CloseTabTitle, action: #selector(BrowserViewController.closeTabKeyCommand), input: "w", modifierFlags: .command, discoverabilityTitle: .CloseTabTitle),
+            UIKeyCommand(title: .ReloadPageTitle, action: #selector(BrowserViewController.reloadTabKeyCommand), input: "r", modifierFlags: .command, discoverabilityTitle: .ReloadPageTitle),
+            UIKeyCommand(title: .BackTitle, action: #selector(BrowserViewController.goBackKeyCommand), input: "[", modifierFlags: .command, discoverabilityTitle: .BackTitle),
+            UIKeyCommand(title: .ForwardTitle, action: #selector(BrowserViewController.goForwardKeyCommand), input: "]", modifierFlags: .command, discoverabilityTitle: .ForwardTitle)
+        ])
+
+        let editMenu = UIMenu(options: .displayInline, children: [
+            UIKeyCommand(title: .FindTitle, action: #selector(BrowserViewController.findInPageKeyCommand), input: "f", modifierFlags: .command, discoverabilityTitle: .FindTitle),
+        ])
+
+        let viewMenu = UIMenu(options: .displayInline, children: [
+            UIKeyCommand(title: .ShowNextTabTitle, action: #selector(BrowserViewController.nextTabKeyCommand), input: "\t", modifierFlags: .control, discoverabilityTitle: .ShowNextTabTitle),
+            UIKeyCommand(title: .ShowPreviousTabTitle, action: #selector(BrowserViewController.previousTabKeyCommand), input: "\t", modifierFlags: [.control, .shift], discoverabilityTitle: .ShowPreviousTabTitle),
+            UIKeyCommand(title: .ShowTabTrayFromTabKeyCodeTitle, action: #selector(BrowserViewController.showTabTrayKeyCommand), input: "\t", modifierFlags: [.command, .alternate], discoverabilityTitle: .ShowTabTrayFromTabKeyCodeTitle)
+        ])
+
+        builder.insertChild(fileMenu, atStartOfMenu: .file)
+        builder.insertChild(editMenu, atStartOfMenu: .edit)
+        builder.insertChild(viewMenu, atStartOfMenu: .view)
     }
 }

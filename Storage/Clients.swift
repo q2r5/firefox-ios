@@ -5,7 +5,7 @@
 import Shared
 import SwiftyJSON
 
-public struct RemoteClient: Equatable {
+public struct RemoteClient: Codable {
     public let guid: GUID?
     public let modified: Timestamp
 
@@ -56,16 +56,18 @@ public struct RemoteClient: Equatable {
     }
 }
 
-// TODO: should this really compare tabs?
-public func ==(lhs: RemoteClient, rhs: RemoteClient) -> Bool {
-    return lhs.guid == rhs.guid &&
-        lhs.name == rhs.name &&
-        lhs.modified == rhs.modified &&
-        lhs.type == rhs.type &&
-        lhs.formfactor == rhs.formfactor &&
-        lhs.os == rhs.os &&
-        lhs.version == rhs.version &&
-        lhs.fxaDeviceId == rhs.fxaDeviceId
+extension RemoteClient: Equatable {
+    // TODO: should this really compare tabs?
+    public static func ==(lhs: RemoteClient, rhs: RemoteClient) -> Bool {
+        return lhs.guid == rhs.guid &&
+            lhs.name == rhs.name &&
+            lhs.modified == rhs.modified &&
+            lhs.type == rhs.type &&
+            lhs.formfactor == rhs.formfactor &&
+            lhs.os == rhs.os &&
+            lhs.version == rhs.version &&
+            lhs.fxaDeviceId == rhs.fxaDeviceId
+    }
 }
 
 extension RemoteClient: CustomStringConvertible {

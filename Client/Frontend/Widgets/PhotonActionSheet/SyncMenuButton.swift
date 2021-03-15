@@ -11,9 +11,9 @@ class SyncMenuButton: UIButton {
     init(with syncManager: SyncManager) {
         self.syncManager = syncManager
 
-        let image = UIImage(named: "FxA-Sync")!.createScaled(iconSize)
+        let image = UIImage(named: "menu-sync")!.createScaled(iconSize)
         self.normalImage = LegacyThemeManager.instance.currentName == .dark ? image.tinted(withColor: .white) : image
-        self.syncingImage = UIImage(named: "FxA-Sync-Blue")!.createScaled(iconSize)
+        self.syncingImage = UIImage(named: "menu-sync")!.createScaled(iconSize).tinted(withColor: UIColor.Photon.Blue40)
 
         super.init(frame: .zero)
 

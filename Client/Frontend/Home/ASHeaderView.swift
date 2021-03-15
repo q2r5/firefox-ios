@@ -24,8 +24,7 @@ class ASHeaderView: UICollectionReusableView {
     var sectionType: ASHeaderViewType = .normal
     private var titleLeadingConstraint: NSLayoutConstraint?
 
-    lazy var titleLabel: UILabel = .build { label in
-        label.text = self.title
+    let titleLabel: UILabel = .build { label in
         label.textColor = UIColor.theme.homePanel.activityStreamHeaderText
         label.font = DynamicFontHelper.defaultHelper.preferredBoldFont(withTextStyle: .title3,
                                                                        maxSize: FirefoxHomeHeaderViewUX.maxTitleLabelTextSize)
@@ -33,7 +32,7 @@ class ASHeaderView: UICollectionReusableView {
         label.numberOfLines = 0
     }
 
-    lazy var moreButton: UIButton = .build { button in
+    let moreButton: UIButton = .build { button in
         button.isHidden = true
         button.titleLabel?.adjustsFontForContentSizeCategory = true
         button.titleLabel?.font = DynamicFontHelper.defaultHelper.preferredFont(withTextStyle: .subheadline,
@@ -71,6 +70,7 @@ class ASHeaderView: UICollectionReusableView {
         addSubview(titleLabel)
         addSubview(moreButton)
 
+        titleLabel.text = self.title
         NSLayoutConstraint.activate([
             moreButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
             moreButton.trailingAnchor.constraint(equalTo: safeAreaLayoutGuide.trailingAnchor, constant: -titleInsets),

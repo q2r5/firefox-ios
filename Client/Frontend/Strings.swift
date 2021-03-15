@@ -178,7 +178,7 @@ extension String {
                 public static let Description = MZLocalizedString("Settings.Home.Option.Description", value: "Choose content you see on the Firefox homepage.", comment: "In the settings menu, on the Firefox homepage customization section, this is the description below the section, describing what the options in the section are for.", lastUpdated: .v39)
             }
 
-            struct StartAtHome {
+            public struct StartAtHome {
                 public static let SectionTitle = MZLocalizedString("Settings.Home.Option.StartAtHome.Title", value: "Opening screen", comment: "Title for the section in the settings menu where users can configure the behaviour of the Start at Home feature on the Firefox Homepage.", lastUpdated: .v39)
                 public static let SectionDescription = MZLocalizedString("Settings.Home.Option.StartAtHome.Description", value: "Choose what you see when you return to Firefox.", comment: "In the settings menu, in the Start at Home customization options, this is text that appears below the section, describing what the section settings do.", lastUpdated: .v39)
                 public static let AfterFourHours = MZLocalizedString("Settings.Home.Option.StartAtHome.AfterFourHours", value: "Homepage after four hours of inactivity", comment: "In the settings menu, on the Start at Home homepage customization option, this allows users to set this setting to return to the Homepage after four hours of inactivity.", lastUpdated: .v39)
@@ -511,6 +511,7 @@ extension String {
     // Settings strings
     public static let FxAFirefoxAccount = MZLocalizedString("FxA.FirefoxAccount", value: "Firefox Account", comment: "Settings section title for Firefox Account", lastUpdated: .unknown)
     public static let FxASignInToSync = MZLocalizedString("FxA.SignIntoSync", value: "Sign in to Sync", comment: "Button label to sign into Sync", lastUpdated: .unknown)
+    public static let FxASignInToFirefox = MZLocalizedString("FxA.SignIntoFirefox", value: "Sign In to Firefox", comment: "Button label to sign into Firefox", lastUpdated: .unknown)
     public static let FxATakeYourWebWithYou = MZLocalizedString("FxA.TakeYourWebWithYou", value: "Take Your Web With You", comment: "Call to action for sign into sync button", lastUpdated: .unknown)
     public static let FxASyncUsageDetails = MZLocalizedString("FxA.SyncExplain", value: "Get your tabs, bookmarks, and passwords from your other devices.", comment: "Label explaining what sync does", lastUpdated: .unknown)
     public static let FxAAccountVerificationRequired = MZLocalizedString("FxA.AccountVerificationRequired", value: "Account Verification Required", comment: "Label stating your account is not verified", lastUpdated: .unknown)
@@ -697,6 +698,7 @@ extension String {
 // MARK: - Download Helper
 extension String {
     public static let OpenInDownloadHelperAlertDownloadNow = MZLocalizedString("Downloads.Alert.DownloadNow", value: "Download Now", comment: "The label of the button the user will press to start downloading a file", lastUpdated: .unknown)
+    public static let OpenInDownloadHelperAlertOpenIn = MZLocalizedString("Downloads.Alert.OpenIn", value: "Open In...", comment: "The label of the button the user will press to open a file with a certain app", lastUpdated: .unknown)
     public static let DownloadsButtonTitle = MZLocalizedString("Downloads.Toast.GoToDownloads.Button", value: "Downloads", comment: "The button to open a new tab with the Downloads home panel", lastUpdated: .unknown)
     public static let CancelDownloadDialogTitle = MZLocalizedString("Downloads.CancelDialog.Title", value: "Cancel Download", comment: "Alert dialog title when the user taps the cancel download icon.", lastUpdated: .unknown)
     public static let CancelDownloadDialogMessage = MZLocalizedString("Downloads.CancelDialog.Message", value: "Are you sure you want to cancel this download?", comment: "Alert dialog body when the user taps the cancel download icon.", lastUpdated: .unknown)
@@ -1537,7 +1539,7 @@ extension String {
     public static let ClearableOfflineData = MZLocalizedString("Offline Website Data", tableName: "ClearPrivateData", comment: "Settings item for clearing website data", lastUpdated: .unknown)
     public static let ClearableCookies = MZLocalizedString("Cookies", tableName: "ClearPrivateData", comment: "Settings item for clearing cookies", lastUpdated: .unknown)
     public static let ClearableDownloads = MZLocalizedString("Downloaded Files", tableName: "ClearPrivateData", comment: "Settings item for deleting downloaded files", lastUpdated: .unknown)
-    public static let ClearableSpotlight = MZLocalizedString("Spotlight Index", tableName: "ClearPrivateData", comment: "A settings item that allows a user to use Apple's \"Spotlight Search\" in Data Management's Website Data option to search for and select an item to delete.", lastUpdated: .unknown)
+    public static let ClearableSpotlight = MZLocalizedString("Spotlight Index", tableName: "ClearPrivateData", comment: "Settings item for deleting the iOS search index of browsed webpages", lastUpdated: .unknown)
 }
 
 // MARK: - SearchEngine Picker

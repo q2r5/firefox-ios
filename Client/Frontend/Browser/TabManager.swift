@@ -7,6 +7,7 @@ import WebKit
 import Storage
 import Shared
 import XCGLogger
+import Sentry
 
 private let log = Logger.browserLogger
 
@@ -75,6 +76,7 @@ class TabManager: NSObject, FeatureFlagsProtocol {
         configuration.processPool = WKProcessPool()
         let blockPopups = prefs?.boolForKey(PrefsKeys.KeyBlockPopups) ?? true
         configuration.preferences.javaScriptCanOpenWindowsAutomatically = !blockPopups
+        configuration.upgradeKnownHostsToHTTPS = true
         // We do this to go against the configuration of the <meta name="viewport">
         // tag to behave the same way as Safari :-(
         configuration.ignoresViewportScaleLimits = true
@@ -452,7 +454,6 @@ class TabManager: NSObject, FeatureFlagsProtocol {
         guard let index = tabs.firstIndex(where: { $0 === tab }) else { return }
         removeTab(tab, flushToDisk: true, notify: true)
         updateIndexAfterRemovalOf(tab, deletedIndex: index)
-        hideNetworkActivitySpinner()
 
         TelemetryWrapper.recordEvent(
             category: .action,
@@ -509,6 +510,7 @@ class TabManager: NSObject, FeatureFlagsProtocol {
         if notify {
             delegates.forEach { $0.get()?.tabManager(self, didRemoveTab: tab, isRestoring: store.isRestoringTabs) }
             TabEvent.post(.didClose, for: tab)
+            NotificationCenter.default.post(name: .TabClosed, object: nil)
         }
 
         if flushToDisk {
@@ -637,6 +639,14 @@ class TabManager: NSObject, FeatureFlagsProtocol {
         return filterdTabs.first
     }
 
+    func getTabForURL(_ url: URL, uuid: String) -> Tab? {
+        assert(Thread.isMainThread)
+        let filterdTabs = tabs.filter { tab -> Bool in
+            tab.tabUUID == uuid
+        }
+        return filterdTabs.first
+    }
+
     @objc func prefsDidChange() {
         DispatchQueue.main.async {
             let allowPopups = !(self.profile.prefs.boolForKey(PrefsKeys.KeyBlockPopups) ?? true)
@@ -710,8 +720,6 @@ extension TabManager: WKNavigationDelegate {
 
     // Note the main frame JSContext (i.e. document, window) is not available yet.
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-        UIApplication.shared.isNetworkActivityIndicatorVisible = true
-
         if let tab = self[webView], let blocker = tab.contentBlocker {
             blocker.clearPageStats()
         }
@@ -728,7 +736,6 @@ extension TabManager: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        hideNetworkActivitySpinner()
         // tab restore uses internal pages, so don't call storeChanges unnecessarily on startup
         if let url = webView.url {
             if let internalUrl = InternalURL(url), internalUrl.isSessionRestore {
@@ -737,17 +744,6 @@ extension TabManager: WKNavigationDelegate {
 
             storeChanges()
         }
-    }
-
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        hideNetworkActivitySpinner()
-    }
-
-    func hideNetworkActivitySpinner() {
-        for tab in tabs where tab.webView?.isLoading == true {
-            return
-        }
-        UIApplication.shared.isNetworkActivityIndicatorVisible = false
     }
 
     /// Called when the WKWebView's content process has gone away. If this happens for the currently selected tab
@@ -841,6 +837,20 @@ class TabManagerNavDelegate: NSObject, WKNavigationDelegate {
             })
         }
         decisionHandler(res)
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences, decisionHandler: @escaping (WKNavigationActionPolicy, WKWebpagePreferences) -> Void) {
+        var res = WKNavigationActionPolicy.allow
+        var prefs = preferences
+        for delegate in delegates {
+            delegate.webView?(webView, decidePolicyFor: navigationAction, preferences: preferences, decisionHandler: { policy, preferences in
+                if policy == .cancel {
+                    res = policy
+                }
+                prefs = preferences
+            })
+        }
+        decisionHandler(res, prefs)
     }
 
     func webView(_ webView: WKWebView,

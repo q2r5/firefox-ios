@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import UIKit
-import SnapKit
 import Shared
 import Storage
 
@@ -30,13 +29,14 @@ class EmbeddedNavController {
     weak var parent: UIViewController?
     var controllers = [UIViewController]()
     var navigationController: UINavigationController
-    var heightConstraint: Constraint!
+    var heightConstraint: NSLayoutConstraint
     let isSearchMode: Bool
 
     init(isSearchMode: Bool, parent: UIViewController, rootViewController: UIViewController) {
         self.parent = parent
         self.isSearchMode = isSearchMode
         navigationController = UINavigationController(rootViewController: rootViewController)
+        navigationController.view.translatesAutoresizingMaskIntoConstraints = false
 
         parent.addChild(navigationController)
         parent.view.addSubview(navigationController.view)
@@ -44,12 +44,15 @@ class EmbeddedNavController {
         let width = min(DeviceInfo.screenSizeOrientationIndependent().width * 0.90, CGFloat(UX.topViewWidth))
 
         let initialHeight = isSearchMode ? UX.topViewHeightForSearchMode : UX.topViewHeight
-        navigationController.view.snp.makeConstraints { make in
-            make.center.equalToSuperview()
-            make.width.equalTo(width)
-            heightConstraint = make.height.equalTo(initialHeight).constraint
-            layout(forTraitCollection: navigationController.traitCollection)
-        }
+
+        heightConstraint = navigationController.view.heightAnchor.constraint(equalToConstant: initialHeight)
+        NSLayoutConstraint.activate([
+            navigationController.view.centerXAnchor.constraint(equalTo: parent.view.centerXAnchor),
+            navigationController.view.centerYAnchor.constraint(equalTo: parent.view.centerYAnchor),
+            navigationController.view.widthAnchor.constraint(equalToConstant: width),
+            heightConstraint
+        ])
+        layout(forTraitCollection: navigationController.traitCollection)
 
         navigationController.view.layer.cornerRadius = UX.dialogCornerRadius
         navigationController.view.layer.masksToBounds = true
@@ -61,14 +64,14 @@ class EmbeddedNavController {
             return
         }
 
-        let updatedHeight: Int
+        let updatedHeight: CGFloat
         if UX.enableResizeRowsForSmallScreens {
-            let shrinkage = UX.navBarLandscapeShrinkage + (UX.numberOfActionRows + 1 /*one info row*/) * UX.perRowShrinkageForLandscape
+            let shrinkage = UX.navBarLandscapeShrinkage + CGFloat(UX.numberOfActionRows + 1 /*one info row*/) * UX.perRowShrinkageForLandscape
             updatedHeight = isLandscapeSmallScreen(forTraitCollection) ? UX.topViewHeight - shrinkage : UX.topViewHeight
         } else {
             updatedHeight = forTraitCollection.verticalSizeClass == .compact ? UX.topViewHeight - UX.navBarLandscapeShrinkage : UX.topViewHeight
         }
-        heightConstraint.update(offset: updatedHeight)
+        heightConstraint.constant = updatedHeight
     }
 
     deinit {

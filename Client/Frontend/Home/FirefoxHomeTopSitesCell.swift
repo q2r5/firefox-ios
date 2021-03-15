@@ -29,43 +29,34 @@ class TopSiteItemCell: UICollectionViewCell, NotificationThemeable {
 
     var url: URL?
 
-    lazy var imageView: UIImageView = {
-        let imageView = UIImageView()
+    let imageView: UIImageView = .build { imageView in
         imageView.layer.cornerRadius = TopSiteCellUX.IconCornerRadius
         imageView.layer.masksToBounds = true
-        return imageView
-    }()
+    }
 
     lazy var titleWrapper = UIView()
 
-    lazy var pinImageView: UIImageView = {
-        let imageView = UIImageView()
+    let pinImageView: UIImageView = .build { imageView in
         imageView.image = UIImage.templateImageNamed("pin_small")
-        return imageView
-    }()
+    }
 
-    lazy fileprivate var titleLabel: UILabel = {
-        let titleLabel = UILabel()
+    fileprivate let titleLabel: UILabel = .build { titleLabel in
         titleLabel.textAlignment = .center
         titleLabel.font = UIFont.preferredFont(forTextStyle: .caption1)
+        titleLabel.adjustsFontForContentSizeCategory = true
         titleLabel.preferredMaxLayoutWidth = TopSiteCellUX.BackgroundSize.width + TopSiteCellUX.ShadowRadius
-        return titleLabel
-    }()
+    }
 
-    lazy private var faviconBG: UIView = {
-        let view = UIView()
+    private let faviconBG: UIView = .build { view in
         view.layer.cornerRadius = TopSiteCellUX.CellCornerRadius
         view.layer.borderWidth = TopSiteCellUX.BorderWidth
         view.layer.shadowOffset = CGSize(width: 0, height: 2)
         view.layer.shadowRadius = TopSiteCellUX.ShadowRadius
-        return view
-    }()
+    }
 
-    lazy var selectedOverlay: UIView = {
-        let selectedOverlay = UIView()
+    let selectedOverlay: UIView = .build { selectedOverlay in
         selectedOverlay.isHidden = true
-        return selectedOverlay
-    }()
+    }
 
     override var isSelected: Bool {
         didSet {
@@ -423,7 +414,7 @@ class ASHorizontalScrollCellManager: NSObject, UICollectionViewDelegate, UIColle
         // On iPad
         // The number of items in a row is equal to the number of highlights in a row * 2
         var numItems = Int(FirefoxHomeUX.numberOfItemsPerRowForSizeClassIpad[traits.horizontalSizeClass])
-        if UIWindow.isLandscape || (traits.horizontalSizeClass == .compact && isLandscape) {
+        if isLandscape || (traits.horizontalSizeClass == .compact && isLandscape) {
             numItems = numItems - 1
         }
         return numItems * 2

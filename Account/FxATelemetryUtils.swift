@@ -2,7 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import SwiftyJSON
 import SyncTelemetry
 
 open class FxATelemetry {
@@ -10,11 +9,13 @@ open class FxATelemetry {
     /// into a list of events that can be recorded into prefs, and then
     /// included in the next Sync ping. Ignores malformed and unknown events.
     public static func parseTelemetry(fromJSONString string: String) -> [Event] {
-        let json = JSON(parseJSON: string)
-        let commandsSent = json["commands_sent"].array?.compactMap {
+        guard let data = string.data(using: .utf8), let json = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed) as? [String: Any] else {
+            return []
+        }
+        let commandsSent = (json["commands_sent"] as? Array<[String: Any]>)?.compactMap {
             sentCommand -> Event? in
-                guard let flowID = sentCommand["flow_id"].string,
-                    let streamID = sentCommand["stream_id"].string else {
+                guard let flowID = sentCommand["flow_id"] as? String,
+                    let streamID = sentCommand["stream_id"] as? String else {
                         return nil
                 }
                 let extra: [String: String] = [
@@ -26,11 +27,11 @@ open class FxATelemetry {
                              object: "command-sent",
                              extra: extra)
         } ?? []
-        let commandsReceived = json["commands_received"].array?.compactMap {
+        let commandsReceived = (json["commands_received"] as? Array<[String: Any]>)?.compactMap {
             receivedCommand -> Event? in
-                guard let flowID = receivedCommand["flow_id"].string,
-                    let streamID = receivedCommand["stream_id"].string,
-                    let reason = receivedCommand["reason"].string else {
+                guard let flowID = receivedCommand["flow_id"] as? String,
+                    let streamID = receivedCommand["stream_id"] as? String,
+                    let reason = receivedCommand["reason"] as? String else {
                         return nil
                 }
                 let extra: [String: String] = [

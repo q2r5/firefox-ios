@@ -10,13 +10,13 @@ struct IntentProvider: IntentTimelineProvider {
     typealias Intent = QuickActionIntent
     typealias Entry = QuickLinkEntry
 
-    func getSnapshot(for configuration: QuickActionIntent, in context: Context, completion: @escaping (QuickLinkEntry) -> Void) {
+    func getSnapshot(for configuration: Intent, in context: Context, completion: @escaping (Entry) -> Void) {
         let entry = QuickLinkEntry(date: Date(), link: .search)
         completion(entry)
     }
 
-    func getTimeline(for configuration: QuickActionIntent, in context: Context, completion: @escaping (Timeline<QuickLinkEntry>) -> Void) {
-        let entry = QuickLinkEntry(date: Date(), link: QuickLink(rawValue: configuration.actionType.rawValue)!)
+    func getTimeline(for configuration: Intent, in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
+        let entry = QuickLinkEntry(date: Date(), link: QuickLink.from(configuration))
         let timeline = Timeline(entries: [entry], policy: .never)
         completion(timeline)
     }
@@ -60,6 +60,7 @@ struct SmallQuickActionsPreviews: PreviewProvider {
     static var previews: some View {
         Group {
             SmallQuickLinkView(entry: testEntry)
+                .previewContext(WidgetPreviewContext(family: .systemSmall))
                 .environment(\.colorScheme, .dark)
         }
     }

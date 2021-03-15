@@ -10,7 +10,7 @@
 # for easy navigation
 
 ---
-$schema: moz://mozilla.org/schemas/glean/metrics/1-0-0
+$schema: moz://mozilla.org/schemas/glean/metrics/2-0-0
 
 # App menu
 app_menu:
@@ -433,9 +433,11 @@ top_site:
         description: |
           Type of tile pressed (Ex: google,
           suggested, user-added or history-based)
+        type: string
       position:
         description: |
           Position of top site.
+        type: quantity
     bugs:
       - https://github.com/mozilla-mobile/firefox-ios/issues/8501
     data_reviews:
@@ -569,6 +571,7 @@ firefox_home_page:
         description: |
           The number of bookmarked items in the
           Recently Saved section.
+        type: string
     bugs:
       - https://jira.mozilla.com/browse/FXIOS-1807
     data_reviews:
@@ -587,6 +590,7 @@ firefox_home_page:
         description: |
           The number of reading list items in the
           Recently Saved section.
+        type: string
     bugs:
       - https://mozilla-hub.atlassian.net/browse/FXIOS-1808
     data_reviews:
@@ -756,6 +760,42 @@ firefox_home_page:
     notification_emails:
       - fx-ios-data-stewards@mozilla.com
     expires: "2022-05-01"
+  history_highlights_show_all:
+    type: counter
+    description: |
+      Counts the number of times a user taps the
+      Show All button in the History section
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/FXIOS-2905
+    data_reviews:
+      - https://github.com/mozilla-mobile/firefox-ios/pull/8905
+    notification_emails:
+      - fx-ios-data-stewards@mozilla.com
+    expires: "2022-06-01"
+  history_highlights_view:
+    type: counter
+    description: |
+      Counts the number of times a user sees the
+      History Highlights section on the homepage
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/FXIOS-2905
+    data_reviews:
+      - https://github.com/mozilla-mobile/firefox-ios/pull/8905
+    notification_emails:
+      - fx-ios-data-stewards@mozilla.com
+    expires: "2022-06-01"
+  history_highlights_item_opened:
+    type: counter
+    description: |
+      Counts the number of times a user taps to open an
+      existing tab from the History Highlights section
+    bugs:
+      - https://mozilla-hub.atlassian.net/browse/FXIOS-2905
+    data_reviews:
+      - https://github.com/mozilla-mobile/firefox-ios/pull/8905
+    notification_emails:
+      - fx-ios-data-stewards@mozilla.com
+    expires: "2022-06-01"
 
 # Library
 library:
@@ -991,9 +1031,11 @@ preferences:
       recorded in the extra keys.
     extra_keys:
       preference:
+        type: string
         description: |
           The preference that was changed.
       changed_to:
+        type: string
         description: |
           The value the preference was changed to.
     bugs:
@@ -1408,17 +1450,6 @@ tabs:
     notification_emails:
       - fx-ios-data-stewards@mozilla.com
     expires: "2022-01-01"
-  normal_and_private_uri_count:
-    type: counter
-    description: |
-      Record the number of URI's visited by the user.
-    bugs:
-      - https://github.com/mozilla-mobile/firefox-ios/issues/9158
-    data_reviews:
-      - https://github.com/mozilla-mobile/firefox-ios/pull/9504
-    notification_emails:
-      - fx-ios-data-stewards@mozilla.com
-    expires: never
   grouped_tab:
     type: event
     description: |

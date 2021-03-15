@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import UIKit
-import SnapKit
 
 struct TwoLineCellUX {
     static let ImageSize: CGFloat = 29
@@ -14,44 +13,34 @@ struct TwoLineCellUX {
 
 class TwoLineImageOverlayCell: UITableViewCell, NotificationThemeable {
     // Tableview cell items
-    var selectedView: UIView = {
-        let view = UIView()
+    let selectedView: UIView = .build { view in
         view.backgroundColor = UIColor.theme.tableView.selectedBackground
-        return view
-    }()
+    }
     
-    var leftImageView: UIImageView = {
-        let imgView = UIImageView()
+    let leftImageView: UIImageView = .build { imgView in
         imgView.contentMode = .scaleAspectFit
         imgView.layer.cornerRadius = 5.0
         imgView.clipsToBounds = true
-        return imgView
-    }()
+    }
     
-    var leftOverlayImageView: UIImageView = {
-        let imgView = UIImageView()
+    let leftOverlayImageView: UIImageView = .build { imgView in
         imgView.contentMode = .scaleAspectFit
         imgView.clipsToBounds = true
-        return imgView
-    }()
+    }
 
-    var titleLabel: UILabel = {
-        let label = UILabel()
+    let titleLabel: UILabel = .build { label in
         label.textColor = .black
         label.font = UIFont.systemFont(ofSize: 16, weight: .regular)
         label.textAlignment = .left
         label.numberOfLines = 1
-        return label
-    }()
+    }
     
-    var descriptionLabel: UILabel = {
-        let label = UILabel()
+    let descriptionLabel: UILabel = .build { label in
         label.textColor = UIColor.Photon.Grey40
         label.font = UIFont.systemFont(ofSize: 14, weight: .regular)
         label.textAlignment = .left
         label.numberOfLines = 1
-        return label
-    }()
+    }
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -62,8 +51,8 @@ class TwoLineImageOverlayCell: UITableViewCell, NotificationThemeable {
         fatalError("init(coder:) has not been implemented")
     }
     
-    let containerView = UIView()
-    let midView = UIView()
+    let containerView: UIView = .build()
+    let midView: UIView = .build()
     
     private func initialViewSetup() {
         separatorInset = UIEdgeInsets(top: 0, left: TwoLineCellUX.ImageSize + 2 * TwoLineCellUX.BorderViewMargin, bottom: 0, right: 0)
@@ -79,45 +68,33 @@ class TwoLineImageOverlayCell: UITableViewCell, NotificationThemeable {
         contentView.addSubview(containerView)
         bringSubviewToFront(containerView)
 
-        containerView.snp.makeConstraints { make in
-            make.height.equalTo(58)
-            make.top.bottom.equalToSuperview()
-            make.leading.equalToSuperview()
-            make.trailing.equalTo(accessoryView?.snp.leading ?? snp.trailing)
-        }
-
-        leftImageView.snp.makeConstraints { make in
-            make.height.width.equalTo(28)
-            make.leading.equalTo(containerView.snp.leading).offset(15)
-            make.centerY.equalTo(containerView.snp.centerY)
-        }
-
-        leftOverlayImageView.snp.makeConstraints { make in
-            make.height.width.equalTo(22)
-            make.trailing.equalTo(leftImageView).offset(7)
-            make.bottom.equalTo(leftImageView).offset(7)
-        }
-
-        midView.snp.makeConstraints { make in
-            make.height.equalTo(46)
-            make.centerY.equalToSuperview()
-            make.leading.equalTo(leftImageView.snp.trailing).offset(13)
-            make.trailing.equalTo(containerView.snp.trailing).offset(-7)
-        }
-
-        titleLabel.snp.makeConstraints { make in
-            make.top.equalTo(midView.snp.top).offset(4)
-            make.height.equalTo(18)
-            make.leading.equalTo(midView.snp.leading)
-            make.trailing.equalTo(midView.snp.trailing)
-        }
-
-        descriptionLabel.snp.makeConstraints { make in
-            make.height.equalTo(16)
-            make.bottom.equalTo(midView.snp.bottom).offset(-4)
-            make.leading.equalTo(midView.snp.leading)
-            make.trailing.equalTo(midView.snp.trailing)
-        }
+        NSLayoutConstraint.activate([
+            containerView.heightAnchor.constraint(equalToConstant: 58),
+            containerView.topAnchor.constraint(equalTo: self.topAnchor),
+            containerView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+            containerView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: accessoryView?.leadingAnchor ?? self.trailingAnchor),
+            leftImageView.heightAnchor.constraint(equalToConstant: 28),
+            leftImageView.widthAnchor.constraint(equalToConstant: 28),
+            leftImageView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 15),
+            leftImageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+            leftOverlayImageView.heightAnchor.constraint(equalToConstant: 22),
+            leftOverlayImageView.widthAnchor.constraint(equalToConstant: 22),
+            leftOverlayImageView.trailingAnchor.constraint(equalTo: leftImageView.trailingAnchor, constant: 7),
+            leftOverlayImageView.bottomAnchor.constraint(equalTo: leftImageView.bottomAnchor, constant: 7),
+            midView.heightAnchor.constraint(equalToConstant: 46),
+            midView.centerYAnchor.constraint(equalTo: self.centerYAnchor),
+            midView.leadingAnchor.constraint(equalTo: leftImageView.trailingAnchor, constant: 13),
+            midView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -7),
+            titleLabel.topAnchor.constraint(equalTo: midView.topAnchor, constant: 4),
+            titleLabel.heightAnchor.constraint(equalToConstant: 18),
+            titleLabel.leadingAnchor.constraint(equalTo: midView.leadingAnchor),
+            titleLabel.trailingAnchor.constraint(equalTo: midView.trailingAnchor),
+            descriptionLabel.heightAnchor.constraint(equalToConstant: 16),
+            descriptionLabel.bottomAnchor.constraint(equalTo: midView.bottomAnchor, constant: -4),
+            descriptionLabel.leadingAnchor.constraint(equalTo: midView.leadingAnchor),
+            descriptionLabel.trailingAnchor.constraint(equalTo: midView.trailingAnchor)
+        ])
         
         selectedBackgroundView = selectedView
         applyTheme()
@@ -145,41 +122,31 @@ class TwoLineImageOverlayCell: UITableViewCell, NotificationThemeable {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        containerView.snp.remakeConstraints { make in
-            make.height.equalTo(55)
-            make.top.bottom.equalToSuperview()
-            make.leading.equalToSuperview()
-            make.trailing.equalTo(accessoryView?.snp.leading ?? snp.trailing)
-        }
+        containerView.removeConstraint(containerView.heightAnchor.constraint(equalToConstant: 58))
+        containerView.addConstraint(containerView.heightAnchor.constraint(equalToConstant: 55))
     }
 }
 
 
 class SimpleTwoLineCell: UITableViewCell, NotificationThemeable {
     // Tableview cell items
-    var selectedView: UIView = {
-        let view = UIView()
+    var selectedView: UIView = .build { view in
         view.backgroundColor = UIColor.theme.tableView.selectedBackground
-        return view
-    }()
+    }
 
-    var titleLabel: UILabel = {
-        let label = UILabel()
+    var titleLabel: UILabel = .build { label in
         label.textColor = .black
         label.font = UIFont.systemFont(ofSize: 17, weight: .regular)
         label.textAlignment = .left
         label.numberOfLines = 1
-        return label
-    }()
+    }
     
-    var descriptionLabel: UILabel = {
-        let label = UILabel()
+    var descriptionLabel: UILabel = .build { label in
         label.textColor = UIColor.Photon.Grey40
         label.font = UIFont.systemFont(ofSize: 14, weight: .regular)
         label.textAlignment = .left
         label.numberOfLines = 1
-        return label
-    }()
+    }
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -193,47 +160,39 @@ class SimpleTwoLineCell: UITableViewCell, NotificationThemeable {
     private func initialViewSetup() {
         separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 0)
         self.selectionStyle = .default
-        let midView = UIView()
+        let midView: UIView = .build()
         midView.addSubview(titleLabel)
         midView.addSubview(descriptionLabel)
-        let containerView = UIView()
+        let containerView: UIView = .build()
         containerView.addSubview(midView)
         addSubview(containerView)
         
-        containerView.snp.makeConstraints { make in
-            make.height.equalTo(65)
-            make.top.bottom.equalToSuperview()
-            make.leading.equalToSuperview()
-            make.trailing.equalToSuperview()
-        }
-        
-        midView.snp.makeConstraints { make in
-            make.height.equalTo(46)
-            make.centerY.equalToSuperview()
-            make.leading.equalTo(containerView.snp.leading)
-            make.trailing.equalTo(containerView.snp.trailing)
-        }
-        
-        titleLabel.snp.makeConstraints { make in
-            make.top.equalTo(midView.snp.top).offset(4)
-            make.height.equalTo(18)
-            make.leading.equalToSuperview().offset(16)
-            make.trailing.equalToSuperview().inset(16)
-        }
-        
-        descriptionLabel.snp.makeConstraints { make in
-            make.height.equalTo(14)
-            make.bottom.equalTo(midView.snp.bottom).offset(-4)
-            make.leading.equalToSuperview().offset(16)
-            make.trailing.equalToSuperview().inset(16)
-        }
+        NSLayoutConstraint.activate([
+            containerView.heightAnchor.constraint(equalToConstant: 65),
+            containerView.topAnchor.constraint(equalTo: topAnchor),
+            containerView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            containerView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            containerView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            midView.heightAnchor.constraint(equalToConstant: 46),
+            midView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            midView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            midView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+            titleLabel.topAnchor.constraint(equalTo: midView.topAnchor, constant: 4),
+            titleLabel.heightAnchor.constraint(equalToConstant: 18),
+            titleLabel.leadingAnchor.constraint(equalTo: midView.leadingAnchor, constant: 16),
+            titleLabel.trailingAnchor.constraint(equalTo: midView.trailingAnchor, constant: -16),
+            descriptionLabel.heightAnchor.constraint(equalToConstant: 14),
+            descriptionLabel.bottomAnchor.constraint(equalTo: midView.bottomAnchor, constant: -4),
+            descriptionLabel.leadingAnchor.constraint(equalTo: midView.leadingAnchor, constant: 16),
+            descriptionLabel.trailingAnchor.constraint(equalTo: midView.trailingAnchor, constant: -16)
+        ])
 
         selectedBackgroundView = selectedView
         applyTheme()
     }
     
     func applyTheme() {
-        let theme = BuiltinThemeName(rawValue: LegacyThemeManager.instance.current.name) ?? .normal
+        let theme = LegacyThemeManager.instance.currentName
         if theme == .dark {
             self.backgroundColor = UIColor.Photon.Grey80
             self.titleLabel.textColor = .white
@@ -257,29 +216,23 @@ class SimpleTwoLineCell: UITableViewCell, NotificationThemeable {
 
 class TwoLineHeaderFooterView: UITableViewHeaderFooterView, NotificationThemeable {
     fileprivate let bordersHelper = ThemedHeaderFooterViewBordersHelper()
-    var leftImageView: UIImageView = {
-        let imgView = UIImageView()
+    var leftImageView: UIImageView = .build { imgView in
         imgView.contentMode = .scaleAspectFit
         imgView.clipsToBounds = true
-        return imgView
-    }()
+    }
     
-    var titleLabel: UILabel = {
-        let label = UILabel()
+    var titleLabel: UILabel = .build { label in
         label.textColor = .black
         label.font = UIFont.systemFont(ofSize: 15, weight: .regular)
         label.textAlignment = .left
         label.numberOfLines = 1
-        return label
-    }()
+    }
     
-    var descriptionLabel: UILabel = {
-        let label = UILabel()
+    var descriptionLabel: UILabel = .build { label in
         label.font = UIFont.systemFont(ofSize: 12.5, weight: .regular)
         label.textAlignment = .left
         label.numberOfLines = 1
-        return label
-    }()
+    }
     
     override init(reuseIdentifier: String?) {
         super.init(reuseIdentifier: reuseIdentifier)
@@ -294,28 +247,31 @@ class TwoLineHeaderFooterView: UITableViewHeaderFooterView, NotificationThemeabl
         bordersHelper.initBorders(view: self)
         setDefaultBordersValues()
         layoutMargins = .zero
-        let stackView = UIStackView(arrangedSubviews: [titleLabel, descriptionLabel])
-        stackView.axis = .vertical
-        stackView.alignment = .leading
-        stackView.distribution = .equalCentering
-        stackView.spacing = 2
+        contentView.translatesAutoresizingMaskIntoConstraints = false
+        let stackView: UIStackView = .build { stackView in
+            [self.titleLabel, self.descriptionLabel].forEach {
+                stackView.addArrangedSubview($0)
+            }
+            stackView.axis = .vertical
+            stackView.alignment = .leading
+            stackView.distribution = .equalCentering
+            stackView.spacing = 2
+        }
 
         contentView.addSubview(stackView)
         contentView.addSubview(leftImageView)
-
-        leftImageView.snp.makeConstraints { make in
-            make.height.width.equalTo(29)
-            make.leading.equalToSuperview().inset(15)
-            make.centerY.equalToSuperview()
-        }
-
-        stackView.snp.makeConstraints { make in
-            make.height.equalTo(35)
-            make.top.equalToSuperview().offset(6)
-            make.bottom.equalToSuperview().offset(-6)
-            make.leading.equalTo(leftImageView.snp.trailing).offset(15)
-            make.trailing.equalToSuperview().inset(2)
-        }
+        
+        NSLayoutConstraint.activate([
+            leftImageView.heightAnchor.constraint(equalToConstant: TwoLineCellUX.ImageSize),
+            leftImageView.widthAnchor.constraint(equalToConstant: TwoLineCellUX.ImageSize),
+            leftImageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: -15),
+            leftImageView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            stackView.heightAnchor.constraint(equalToConstant: 35),
+            stackView.topAnchor.constraint(equalTo: topAnchor, constant: 6),
+            stackView.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -6),
+            stackView.leadingAnchor.constraint(equalTo: leftImageView.trailingAnchor, constant: 15),
+            stackView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -2)
+        ])
 
         applyTheme()
     }

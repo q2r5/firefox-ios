@@ -47,6 +47,7 @@ class TopTabsViewController: UIViewController {
         collectionView.clipsToBounds = false
         collectionView.accessibilityIdentifier = "Top Tabs View"
         collectionView.semanticContentAttribute = .forceLeftToRight
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
         return collectionView
     }()
 
@@ -55,6 +56,7 @@ class TopTabsViewController: UIViewController {
         tabsButton.semanticContentAttribute = .forceLeftToRight
         tabsButton.addTarget(self, action: #selector(TopTabsViewController.tabsTrayTapped), for: .touchUpInside)
         tabsButton.accessibilityIdentifier = "TopTabsViewController.tabsButton"
+        tabsButton.translatesAutoresizingMaskIntoConstraints = false
         tabsButton.inTopTabs = true
         return tabsButton
     }()
@@ -64,6 +66,7 @@ class TopTabsViewController: UIViewController {
         newTab.semanticContentAttribute = .forceLeftToRight
         newTab.addTarget(self, action: #selector(TopTabsViewController.newTabTapped), for: .touchUpInside)
         newTab.accessibilityIdentifier = "TopTabsViewController.newTabButton"
+        newTab.translatesAutoresizingMaskIntoConstraints = false
         return newTab
     }()
 
@@ -72,6 +75,7 @@ class TopTabsViewController: UIViewController {
         privateModeButton.semanticContentAttribute = .forceLeftToRight
         privateModeButton.accessibilityIdentifier = "TopTabsViewController.privateModeButton"
         privateModeButton.addTarget(self, action: #selector(TopTabsViewController.togglePrivateModeTapped), for: .touchUpInside)
+        privateModeButton.translatesAutoresizingMaskIntoConstraints = false
         return privateModeButton
     }()
 

@@ -3,7 +3,7 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import Shared
-import MozillaAppServices
+import Nimbus
 import UIKit
 
 struct FlaggableFeature {
@@ -29,6 +29,8 @@ struct FlaggableFeature {
             return PrefsKeys.PullToRefresh
         case .recentlySaved:
             return PrefsKeys.RecentlySavedSectionEnabled
+        case .recentlyVisited:
+            return PrefsKeys.RecentlyVisitedSectionEnabled
         case .startAtHome:
             return PrefsKeys.StartAtHome
         default: return nil

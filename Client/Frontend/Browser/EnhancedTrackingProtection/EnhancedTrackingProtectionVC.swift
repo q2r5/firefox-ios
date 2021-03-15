@@ -108,7 +108,8 @@ class EnhancedTrackingProtectionMenuVC: UIViewController {
 
     private let toggleLabel: UILabel = .build { label in
         label.font = ETPMenuUX.Fonts.viewTitleLabels
-        label.numberOfLines = 0
+        label.adjustsFontSizeToFitWidth = true
+        label.numberOfLines = 2
     }
 
     private let toggleSwitch: UISwitch = .build { toggleSwitch in
@@ -291,6 +292,7 @@ class EnhancedTrackingProtectionMenuVC: UIViewController {
             toggleLabel.trailingAnchor.constraint(equalTo: toggleSwitch.leadingAnchor, constant: -ETPMenuUX.UX.gutterDistance),
             toggleLabel.topAnchor.constraint(equalTo: toggleView.topAnchor, constant: 11),
             toggleLabel.bottomAnchor.constraint(equalTo: toggleView.bottomAnchor, constant: -11),
+            toggleLabel.widthAnchor.constraint(equalTo: toggleView.widthAnchor, multiplier: 0.8),
 
             toggleSwitch.centerYAnchor.constraint(equalTo: toggleView.centerYAnchor),
             toggleSwitch.widthAnchor.constraint(equalToConstant: 51),
@@ -383,7 +385,7 @@ class EnhancedTrackingProtectionMenuVC: UIViewController {
         self.dismiss(animated: true) {
             self.viewModel.onOpenSettingsTapped?()
         }
-}
+    }
 
 // MARK: - Gesture Recognizer
 
@@ -427,7 +429,6 @@ extension EnhancedTrackingProtectionMenuVC: PresentingModalViewControllerDelegat
 
 extension EnhancedTrackingProtectionMenuVC: NotificationThemeable {
     @objc func applyTheme() {
-        overrideUserInterfaceStyle =  LegacyThemeManager.instance.userInterfaceStyle
         view.backgroundColor = UIColor.theme.etpMenu.background
         connectionView.backgroundColor = UIColor.theme.etpMenu.sectionColor
         connectionImage.image = viewModel.connectionStatusImage
@@ -442,5 +443,5 @@ extension EnhancedTrackingProtectionMenuVC: NotificationThemeable {
         protectionView.backgroundColor = UIColor.theme.etpMenu.sectionColor
         protectionButton.setTitleColor(UIColor.theme.etpMenu.switchAndButtonTint, for: .normal)
         setNeedsStatusBarAppearanceUpdate()
-     }
- }
+    }
+}

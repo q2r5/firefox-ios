@@ -9,6 +9,8 @@ import XCGLogger
 import UserNotifications
 import Account
 import SwiftKeychainWrapper
+import FxAClient
+import Sentry
 
 private let log = Logger.browserLogger
 
@@ -97,7 +99,7 @@ extension AppDelegate: UNUserNotificationCenterDelegate {
             profile?.removeAccount()
             
             // show the notification
-            completionHandler([.alert, .sound])
+            completionHandler([.banner, .list, .sound])
         } else {
             openURLsInNewTabs(notification)
         }

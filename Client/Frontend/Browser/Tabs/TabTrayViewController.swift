@@ -2,9 +2,9 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import SnapKit
 import Shared
 import Storage
+import UIKit
 
 enum TabTrayViewAction {
     case addTab
@@ -63,6 +63,7 @@ class TabTrayViewController: UIViewController {
         
         let stackView = UIStackView(arrangedSubviews: [syncingLabel, activityIndicator])
         stackView.spacing = 12
+        stackView.translatesAutoresizingMaskIntoConstraints = false
         return stackView
     }()
 
@@ -86,6 +87,7 @@ class TabTrayViewController: UIViewController {
         label.layer.cornerRadius = TabsButtonUX.CornerRadius
         label.textAlignment = .center
         label.text = viewModel.normalTabsCount
+        label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
@@ -108,6 +110,7 @@ class TabTrayViewController: UIViewController {
         navigationMenu.accessibilityIdentifier = "navBarTabTray"
         navigationMenu.selectedSegmentIndex = viewModel.tabManager.selectedTab?.isPrivate ?? false ? 1 : 0
         navigationMenu.addTarget(self, action: #selector(panelChanged), for: .valueChanged)
+        navigationMenu.translatesAutoresizingMaskIntoConstraints = false
         return navigationMenu
     }()
 
@@ -129,6 +132,7 @@ class TabTrayViewController: UIViewController {
         toolbar.delegate = self
         toolbar.setItems([UIBarButtonItem(customView: navigationMenu)], animated: false)
         toolbar.isTranslucent = false
+        toolbar.translatesAutoresizingMaskIntoConstraints = false
         return toolbar
     }()
 
@@ -171,6 +175,23 @@ class TabTrayViewController: UIViewController {
         }
     }
 
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+
+        if UITraitCollection.current.horizontalSizeClass == .compact {
+            navigationItem.setLeftBarButton(nil, animated: true)
+            navigationItem.titleView = nil
+            navigationItem.setRightBarButtonItems(nil, animated: true)
+            iPhoneViewSetup()
+            navigationController?.setToolbarHidden(false, animated: true)
+            updateToolbarItems(forSyncTabs: viewModel.profile.hasSyncableAccount())
+        }
+
+        if UITraitCollection.current.userInterfaceStyle != previousTraitCollection?.userInterfaceStyle {
+            applyTheme()
+        }
+    }
+
     private func viewSetup() {
         viewModel.syncedTabsController.remotePanelDelegate = self
         
@@ -197,23 +218,19 @@ class TabTrayViewController: UIViewController {
         navigationItem.titleView = navigationMenu
         navigationItem.rightBarButtonItems = [doneButton, fixedSpace, newTabButton]
 
-        navigationItem.titleView?.snp.makeConstraints { make in
-            make.width.equalTo(343)
-        }
+        navigationItem.titleView?.widthAnchor.constraint(equalToConstant: 343).isActive = true
     }
 
     fileprivate func iPhoneViewSetup() {
         view.addSubview(navigationToolbar)
 
-        navigationToolbar.snp.makeConstraints { make in
-            make.left.right.equalTo(view)
-            make.top.equalTo(view.safeArea.top)
-        }
-
-        navigationMenu.snp.makeConstraints { make in
-            make.width.lessThanOrEqualTo(343)
-            make.height.equalTo(ChronologicalTabsControllerUX.navigationMenuHeight)
-        }
+        NSLayoutConstraint.activate([
+            navigationToolbar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            navigationToolbar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            navigationToolbar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            navigationMenu.widthAnchor.constraint(lessThanOrEqualToConstant: 343),
+            navigationMenu.heightAnchor.constraint(equalToConstant: ChronologicalTabsControllerUX.navigationMenuHeight)
+        ])
     }
 
     private func setupNotifications() {
@@ -256,6 +273,7 @@ class TabTrayViewController: UIViewController {
         updateToolbarItems(forSyncTabs: viewModel.profile.hasSyncableAccount())
         viewModel.tabTrayView.didTogglePrivateMode(privateMode)
         updatePrivateUIState()
+        updateTitle()
     }
 
     fileprivate func showPanel(_ panel: UIViewController) {
@@ -266,10 +284,27 @@ class TabTrayViewController: UIViewController {
         let topEdgeInset = shouldUseiPadSetup ? 0 : GridTabTrayControllerUX.NavigationToolbarHeight
         panel.additionalSafeAreaInsets = UIEdgeInsets(top: topEdgeInset, left: 0, bottom: 0, right: 0)
         panel.endAppearanceTransition()
-        panel.view.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-        }
+        NSLayoutConstraint.activate([
+            panel.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            panel.view.topAnchor.constraint(equalTo: view.topAnchor),
+            panel.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            panel.view.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
         panel.didMove(toParent: self)
+        
+        if #available(iOS 15, *) {
+            if let tabTray = panel as? GridTabViewController {
+                setContentScrollView(tabTray.collectionView)
+                navigationController?.setContentScrollView(tabTray.collectionView)
+            } else if let tabTray = panel as? ChronologicalTabsViewController {
+                setContentScrollView(tabTray.tableView)
+                navigationController?.setContentScrollView(tabTray.tableView)
+            } else if let remoteTabs = panel as? RemoteTabsPanel {
+                setContentScrollView(remoteTabs.view.subviews.first as? UITableView)
+                navigationController?.setContentScrollView(remoteTabs.view.subviews.first as? UITableView)
+            }
+        }
+        
         updateTitle()
     }
 
@@ -295,6 +330,7 @@ class TabTrayViewController: UIViewController {
         } else {
             var newToolbarItems: [UIBarButtonItem]? = bottomToolbarItems
             if navigationMenu.selectedSegmentIndex == 2 {
+                navigationItem.rightBarButtonItem = nil
                 newToolbarItems = showSyncItems ? bottomToolbarItemsForSync : nil
             }
             setToolbarItems(newToolbarItems, animated: true)
@@ -343,21 +379,25 @@ class TabTrayViewController: UIViewController {
 extension TabTrayViewController: NotificationThemeable {
      @objc func applyTheme() {
          view.backgroundColor = UIColor.theme.tabTray.background
+         navigationController?.navigationBar.barTintColor = UIColor.theme.tabTray.toolbar
+         navigationController?.navigationBar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
+         navigationController?.toolbar.barTintColor = UIColor.theme.tabTray.toolbar
+         navigationController?.toolbar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
+         navigationItem.rightBarButtonItem?.tintColor = UIColor.theme.tabTray.toolbarButtonTint
          navigationToolbar.barTintColor = UIColor.theme.tabTray.toolbar
          navigationToolbar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
-         let theme = BuiltinThemeName(rawValue: LegacyThemeManager.instance.current.name) ?? .normal
-         if theme == .dark {
+         if LegacyThemeManager.instance.currentName == .dark {
              navigationController?.navigationBar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.white]
          } else {
              navigationController?.navigationBar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.black]
          }
          viewModel.syncedTabsController.applyTheme()
      }
- }
+}
 
 extension TabTrayViewController: UIToolbarDelegate {
     func position(for bar: UIBarPositioning) -> UIBarPosition {
-        return .topAttached
+        return .top
     }
 }
 
@@ -400,33 +440,33 @@ extension TabTrayViewController {
 // MARK: - RemoteTabsPanel : LibraryPanelDelegate
 
 extension TabTrayViewController: RemotePanelDelegate {
-        func remotePanelDidRequestToSignIn() {
-            fxaSignInOrCreateAccountHelper()
+    func remotePanelDidRequestToSignIn() {
+        fxaSignInOrCreateAccountHelper()
+    }
+
+    func remotePanelDidRequestToCreateAccount() {
+        fxaSignInOrCreateAccountHelper()
+    }
+
+    func remotePanelDidRequestToOpenInNewTab(_ url: URL, isPrivate: Bool) {
+        TelemetryWrapper.recordEvent(category: .action, method: .open, object: .syncTab)
+        self.openInNewTab?(url, isPrivate)
+        self.dismissVC()
+    }
+
+    func remotePanel(didSelectURL url: URL, visitType: VisitType) {
+        TelemetryWrapper.recordEvent(category: .action, method: .open, object: .syncTab)
+        self.didSelectUrl?(url, visitType)
+        self.dismissVC()
+    }
+
+    // Sign In and Create Account Helper
+    func fxaSignInOrCreateAccountHelper() {
+        let fxaParams = FxALaunchParams(query: ["entrypoint": "homepanel"])
+        let controller = FirefoxAccountSignInViewController.getSignInOrFxASettingsVC(fxaParams, flowType: .emailLoginFlow, referringPage: .tabTray, profile: viewModel.profile)
+        (controller as? FirefoxAccountSignInViewController)?.shouldReload = { [weak self] in
+            self?.viewModel.reloadRemoteTabs()
         }
-        
-        func remotePanelDidRequestToCreateAccount() {
-            fxaSignInOrCreateAccountHelper()
-        }
-        
-        func remotePanelDidRequestToOpenInNewTab(_ url: URL, isPrivate: Bool) {
-            TelemetryWrapper.recordEvent(category: .action, method: .open, object: .syncTab)
-            self.openInNewTab?(url, isPrivate)
-            self.dismissVC()
-        }
-        
-        func remotePanel(didSelectURL url: URL, visitType: VisitType) {
-            TelemetryWrapper.recordEvent(category: .action, method: .open, object: .syncTab)
-            self.didSelectUrl?(url, visitType)
-            self.dismissVC()
-        }
-    
-        // Sign In and Create Account Helper
-        func fxaSignInOrCreateAccountHelper() {
-            let fxaParams = FxALaunchParams(query: ["entrypoint": "homepanel"])
-            let controller = FirefoxAccountSignInViewController.getSignInOrFxASettingsVC(fxaParams, flowType: .emailLoginFlow, referringPage: .tabTray, profile: viewModel.profile)
-            (controller as? FirefoxAccountSignInViewController)?.shouldReload = { [weak self] in
-                self?.viewModel.reloadRemoteTabs()
-            }
-            presentThemedViewController(navItemLocation: .Left, navItemText: .Close, vcBeingPresented: controller, topTabsVisible: UIDevice.current.userInterfaceIdiom == .pad)
-        }
+        presentThemedViewController(navItemLocation: .Left, navItemText: .Close, vcBeingPresented: controller, topTabsVisible: UIDevice.current.userInterfaceIdiom == .pad)
+    }
 }

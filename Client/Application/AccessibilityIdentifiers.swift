@@ -17,6 +17,13 @@ public struct AccessibilityIdentifiers {
         static let settingsMenuButton = "TabToolbar.menuButton"
     }
 
+    struct TabLocationView {
+        static let pageOptionsButton = "TabLocationView.pageOptionsButton"
+        static let readerModeButton = "TabLocationView.readerModeButton"
+        static let reloadButton = "TabLocationView.reloadButton"
+        static let trackingProtectionButton = "TabLocationView.trackingProtectionButton"
+    }
+
     struct TabTray {
         static let filteredTabs = "filteredTabs"
         static let deleteCloseAllButton = "TabTrayController.deleteButton.closeAll"

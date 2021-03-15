@@ -43,6 +43,10 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
 
     let bookmarkFolderGUID: GUID
 
+    var editBarButtonItem: UIBarButtonItem!
+    var doneBarButtonItem: UIBarButtonItem!
+    var newBarButtonItem: UIBarButtonItem!
+
     var bookmarkFolder: BookmarkFolder?
     var bookmarkNodes = [BookmarkNode]()
     var recentBookmarks = [BookmarkNode]()
@@ -79,6 +83,64 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
         tableView.accessibilityIdentifier = "Bookmarks List"
         tableView.allowsSelectionDuringEditing = true
         tableView.backgroundColor = UIColor.theme.homePanel.panelBackground
+
+        self.editBarButtonItem = UIBarButtonItem(barButtonSystemItem: .edit) { _ in
+            self.enableEditMode()
+        }
+
+        self.doneBarButtonItem = UIBarButtonItem(barButtonSystemItem: .done) { _ in
+            self.disableEditMode()
+        }
+
+        if #available(iOS 14.0, *) {
+            let addMenuItems: [UIMenuElement] = [
+                UIAction(title: .BookmarksNewBookmark) { _ in
+                    guard let bookmarkFolder = self.bookmarkFolder else {
+                        return
+                    }
+
+                    let detailController = BookmarkDetailPanel(profile: self.profile, withNewBookmarkNodeType: .bookmark, parentBookmarkFolder: bookmarkFolder)
+                    self.navigationController?.pushViewController(detailController, animated: true)
+                },
+
+                UIAction(title: .BookmarksNewFolder) { _ in
+                    guard let bookmarkFolder = self.bookmarkFolder else {
+                        return
+                    }
+
+                    let detailController = BookmarkDetailPanel(profile: self.profile, withNewBookmarkNodeType: .folder, parentBookmarkFolder: bookmarkFolder)
+                    self.navigationController?.pushViewController(detailController, animated: true)
+                },
+                UIAction(title: .BookmarksNewSeparator) { _ in
+                    let centerVisibleRow = self.centerVisibleRow()
+
+                    self.profile.places.createSeparator(parentGUID: self.bookmarkFolderGUID, position: UInt32(centerVisibleRow)) >>== { guid in
+                        self.profile.places.getBookmark(guid: guid).uponQueue(.main) { result in
+                            guard case let .success(bookmarkNode) = result, let bookmarkSeparator = bookmarkNode as? BookmarkSeparator else {
+                                return
+                            }
+
+                            let indexPath = IndexPath(row: centerVisibleRow, section: BookmarksSection.bookmarks.rawValue)
+                            self.tableView.beginUpdates()
+                            self.bookmarkNodes.insert(bookmarkSeparator, at: centerVisibleRow)
+                            self.tableView.insertRows(at: [indexPath], with: .automatic)
+                            self.tableView.endUpdates()
+
+                            self.flashRow(at: indexPath)
+                        }
+                    }
+                }
+            ]
+            self.newBarButtonItem = UIBarButtonItem(systemItem: .add, menu: UIMenu(children: addMenuItems))
+        } else {
+            self.newBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add) { _ in
+                self.addNewBookmarkItemAction()
+            }
+        }
+
+        if bookmarkFolderGUID != BookmarkRoots.RootGUID {
+            navigationItem.rightBarButtonItem = editBarButtonItem
+        }
     }
     
     func addNewBookmarkItemAction() {
@@ -137,17 +199,10 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
         super.viewWillTransition(to: size, with: coordinator)
     }
 
-    override func applyTheme() {
-        super.applyTheme()
-
-        if let current = navigationController?.visibleViewController as? NotificationThemeable, current !== self {
-            current.applyTheme()
-        }
-    }
-
     override func reloadData() {
         // Can be called while app backgrounded and the db closed, don't try to reload the data source in this case
         if profile.isShutdown { return }
+        _ = profile.places.reopenIfClosed()
         profile.places.getBookmarksTree(rootGUID: bookmarkFolderGUID, recursive: false).uponQueue(.main) { result in
 
             guard let folder = result.successValue as? BookmarkFolder else {
@@ -184,10 +239,14 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
 
     func enableEditMode() {
         self.tableView.setEditing(true, animated: true)
+        self.navigationItem.leftBarButtonItem = self.newBarButtonItem
+        self.navigationItem.rightBarButtonItem = self.doneBarButtonItem
     }
     
     func disableEditMode() {
         self.tableView.setEditing(false, animated: true)
+        self.navigationItem.leftBarButtonItem = nil
+        self.navigationItem.rightBarButtonItem = self.editBarButtonItem
     }
 
     fileprivate func backButtonView() -> UIView? {
@@ -262,6 +321,27 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
 
     func didAddBookmarkNode() {
         flashLastRowOnNextReload = true
+    }
+    
+    fileprivate func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        guard let site = getSiteDetails(for: indexPath),
+              let siteURL = URL(string: site.url) else { return nil }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: { _ in
+            let openInNewTabAction = UIAction(title: .OpenInNewTabContextMenuTitle) { _ in
+                self.libraryPanelDelegate?.libraryPanelDidRequestToOpenInNewTab(siteURL, isPrivate: false)
+            }
+
+            let openInNewPrivateTabAction = UIAction(title: .OpenInNewPrivateTabContextMenuTitle) { _ in
+                self.libraryPanelDelegate?.libraryPanelDidRequestToOpenInNewTab(siteURL, isPrivate: true)
+            }
+            
+            let deleteBookmarkAction = UIAction(title: .BookmarksPanelDeleteTableAction, attributes: .destructive) { _ in
+                self.deleteBookmarkNodeAtIndexPath(indexPath)
+                TelemetryWrapper.recordEvent(category: .action, method: .delete, object: .bookmark, value: .bookmarksPanel, extras: ["gesture": "swipe"])
+            }
+            return UIMenu(children: [openInNewTabAction, openInNewPrivateTabAction, deleteBookmarkAction])
+        })
     }
 
     @objc fileprivate func didLongPressTableView(_ longPressGestureRecognizer: UILongPressGestureRecognizer) {
@@ -461,13 +541,13 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
         return .delete
     }
 
-    func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
-        let delete = UITableViewRowAction(style: .default, title: .BookmarksPanelDeleteTableAction, handler: { (action, indexPath) in
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let delete = UIContextualAction(style: .destructive, title: .BookmarksPanelDeleteTableAction, handler: { (_, _, _) in
             self.deleteBookmarkNodeAtIndexPath(indexPath)
             TelemetryWrapper.recordEvent(category: .action, method: .delete, object: .bookmark, value: .bookmarksPanel, extras: ["gesture": "swipe"])
         })
 
-        return [delete]
+        return UISwipeActionsConfiguration(actions: [delete])
     }
 }
 

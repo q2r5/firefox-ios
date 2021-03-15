@@ -181,12 +181,12 @@ smix (void *out /* (sizeof(uint32_t) * 2 * r * BLOCK_WORDS) */,
 }
 
 int
-scrypt (const void *password, size_t passwordLen,
-	const void *salt, size_t saltLen,
+scrypt (const void *password, int passwordLen,
+	const void *salt, int saltLen,
 	unsigned int N, unsigned int r, unsigned int p,
-	uint8_t *derivedKey, size_t dkLen)
+	uint8_t *derivedKey, int dkLen)
 {
-  size_t MFLen = sizeof(uint32_t) * 2 * r * BLOCK_WORDS;
+  int MFLen = sizeof(uint32_t) * 2 * r * BLOCK_WORDS;
   uint8_t *B, *b;
   uint32_t *tmp;
   unsigned int i;
@@ -262,12 +262,12 @@ scrypt (const void *password, size_t passwordLen,
 
     PKCS5_PBKDF2_HMAC(
         [self bytes],
-        [self length],
+        (int)[self length],
         [salt bytes],
-        [salt length],
-        iterations,
+        (int)[salt length],
+        (int)iterations,
         EVP_sha256(),
-        length,
+        (int)length,
         key
     );
 
@@ -281,7 +281,7 @@ scrypt (const void *password, size_t passwordLen,
         return nil;
     }
 
-    if (scrypt([self bytes], [self length], [salt bytes], [salt length], n, r, p, buffer, length) != 0) {
+    if (scrypt([self bytes], (int)[self length], [salt bytes], (int)[salt length], n, r, p, buffer, (int)length) != 0) {
         free(buffer);
         return nil;
     }

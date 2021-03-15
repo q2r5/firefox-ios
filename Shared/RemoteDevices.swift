@@ -8,7 +8,7 @@ public protocol RemoteDevices {
     func replaceRemoteDevices(_ remoteDevices: [RemoteDevice]) -> Success
 }
 
-open class RemoteDevice {
+open class RemoteDevice: Hashable, Equatable {
     public let id: String?
     public let name: String
     public let type: String?
@@ -23,5 +23,16 @@ open class RemoteDevice {
         self.isCurrentDevice = isCurrentDevice
         self.lastAccessTime = lastAccessTime
         self.availableCommands = availableCommands
+    }
+    
+    public static func == (lhs: RemoteDevice, rhs: RemoteDevice) -> Bool {
+        return lhs.id == rhs.id
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(name)
+        hasher.combine(type)
+        hasher.combine(isCurrentDevice)
     }
 }

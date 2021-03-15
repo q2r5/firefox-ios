@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import Foundation
+import UIKit
 import Shared
 import Storage
 
@@ -31,6 +31,7 @@ class TabTrayV2ViewModel: NSObject {
     var shouldShowPrivateView: Bool {
         return isPrivate && getTabs().isEmpty
     }
+    var selectedTabs = [Tab]()
 
     init(viewController: ChronologicalTabsViewController) {
         self.viewController = viewController
@@ -159,6 +160,30 @@ class TabTrayV2ViewModel: NSObject {
             return
         }
 
+        remove(tab: tab)
+    }
+
+    func removeTabs(forSection section: Int) {
+        guard let section = TabSection(rawValue: section), let tabs = dataStore[section], !tabs.isEmpty else {
+            return
+        }
+
+        let tabCount = self.getTabs().count
+        tabManager.removeTabs(tabs)
+        if tabCount == tabs.count {
+            // The last tab was removed.
+            if !isPrivate {
+                //Make a new one and dismiss the tab tray
+                self.tabManager.selectTab(self.tabManager.addTab())
+                self.viewController.dismissTabTray()
+            } else {
+                // Leave private mode
+                self.togglePrivateMode(false)
+            }
+        }
+    }
+
+    private func remove(tab: Tab) {
         let tabCount = self.getTabs().count
         tabManager.removeTabAndUpdateSelectedIndex(tab)
         NotificationCenter.default.post(name: .TabClosed, object: nil)
@@ -166,6 +191,24 @@ class TabTrayV2ViewModel: NSObject {
             // The last tab was removed. Dismiss the tab tray
             self.viewController.dismissTabTray()
         }
+    }
+
+    func removeSelectedTabs() {
+        guard !selectedTabs.isEmpty else { return }
+        let tabCount = self.getTabs().count
+        tabManager.removeTabs(self.selectedTabs)
+        if tabCount == selectedTabs.count {
+            // The last tab was removed.
+            if !isPrivate {
+                //Make a new one and dismiss the tab tray
+                self.tabManager.selectTab(self.tabManager.addTab())
+                self.viewController.dismissTabTray()
+            } else {
+                // Leave private mode
+                self.togglePrivateMode(false)
+            }
+        }
+        self.selectedTabs = []
     }
 
     func closeTabsForCurrentTray() {
@@ -179,18 +222,22 @@ class TabTrayV2ViewModel: NSObject {
             }
             
             if self.getTabs().count == 1, let tab = self.getTabs().first {
-            self.tabManager.selectTab(tab)
+                self.tabManager.selectTab(tab)
                 self.viewController.dismissTabTray()
             }
         }
     }
     
-    func didSelectRowAt (index: IndexPath) {
+    func didSelectRowAt(index: IndexPath) {
         guard let section = TabSection(rawValue: index.section), let tab = dataStore[section]?[index.row] else {
             return
         }
-        tab.lastExecutedTime = Date.now()
-        selectTab(tab)
+        if viewController.isEditing {
+            selectedTabs.append(tab)
+        } else {
+            tab.lastExecutedTime = Date.now()
+            selectTab(tab)
+        }
     }
     
     func selectTab(_ tab: Tab) {
@@ -277,5 +324,44 @@ extension TabTrayV2ViewModel: TabManagerDelegate {
 
     func tabManagerDidRemoveAllTabs(_ tabManager: TabManager, toast: ButtonToast?) {
         
+    }
+}
+
+extension TabTrayV2ViewModel: TabPeekDelegate {
+    func tabPeekDidAddBookmark(_ tab: Tab) {
+        tab.browserViewController?.tabTrayDidAddBookmark(tab)
+        SimpleToast().showAlertWithText(.AppMenuAddBookmarkConfirmMessage, bottomContainer: self.viewController.tableView)
+    }
+
+    func tabPeekDidRemoveBookmark(_ tab: Tab) {
+        tab.browserViewController?.tabTrayDidRemoveBookmark(tab)
+        let toast = ButtonToast(labelText: .AppMenuRemoveBookmarkConfirmMessage, buttonText: .UndoString, textAlignment: .left) { isButtonTapped in
+            isButtonTapped ? tab.browserViewController?.tabTrayDidAddBookmark(tab) : nil
+        }
+
+        toast.showToast(viewController: self.viewController, delay: SimpleToastUX.ToastDelayBefore, duration: SimpleToastUX.ToastDismissAfter) { toast in
+            [
+                toast.leadingAnchor.constraint(equalTo: self.viewController.view.leadingAnchor),
+                toast.trailingAnchor.constraint(equalTo: self.viewController.view.trailingAnchor),
+                toast.bottomAnchor.constraint(equalTo: self.viewController.tableView.bottomAnchor)
+            ]
+        }
+    }
+
+    func tabPeekDidAddToReadingList(_ tab: Tab) -> ReadingListItem? {
+        SimpleToast().showAlertWithText(.AppMenuAddToReadingListConfirmMessage, bottomContainer: self.viewController.tableView)
+        return tab.browserViewController?.tabTrayDidAddToReadingList(tab)
+    }
+
+    func tabPeekDidRemoveFromReadingList(_ tab: Tab) {
+        tab.browserViewController?.tabTrayDidRemoveBookmark(tab)
+    }
+
+    func tabPeekDidCloseTab(_ tab: Tab) {
+        remove(tab: tab)
+    }
+
+    func tabPeekRequestsPresentationOf(_ viewController: UIViewController) {
+        self.viewController.present(viewController, animated: true, completion: nil)
     }
 }

@@ -24,7 +24,7 @@ class ThemedTableViewCell: UITableViewCell, NotificationThemeable {
 }
 
 class ThemedTableViewController: UITableViewController, NotificationThemeable {
-    override init(style: UITableView.Style = .grouped) {
+    override init(style: UITableView.Style = .insetGrouped) {
         super.init(style: style)
     }
 
@@ -39,6 +39,7 @@ class ThemedTableViewController: UITableViewController, NotificationThemeable {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        tableView.sectionHeaderTopPadding = 0
         applyTheme()
     }
 
@@ -53,7 +54,7 @@ class ThemedTableViewController: UITableViewController, NotificationThemeable {
 
 class ThemedTableSectionHeaderFooterView: UITableViewHeaderFooterView, NotificationThemeable {
     private struct UX {
-        static let titleHorizontalPadding: CGFloat = 15
+        static let titleHorizontalPadding: CGFloat = 10
         static let titleVerticalPadding: CGFloat = 6
         static let titleVerticalLongPadding: CGFloat = 20
     }
@@ -69,12 +70,13 @@ class ThemedTableSectionHeaderFooterView: UITableViewHeaderFooterView, Notificat
         }
     }
 
-    lazy var titleLabel: UILabel = {
-        var headerLabel = UILabel()
+    lazy var titleLabel: UILabel = .build { headerLabel in
         headerLabel.font = UIFont.systemFont(ofSize: 12.0, weight: UIFont.Weight.regular)
         headerLabel.numberOfLines = 0
-        return headerLabel
-    }()
+    }
+
+    var topConstraint: NSLayoutConstraint?
+    var bottomConstraint: NSLayoutConstraint?
 
     fileprivate lazy var bordersHelper = ThemedHeaderFooterViewBordersHelper()
 
@@ -98,6 +100,14 @@ class ThemedTableSectionHeaderFooterView: UITableViewHeaderFooterView, Notificat
     }
 
     func setupInitialConstraints() {
+        topConstraint = titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: UX.titleVerticalPadding)
+        bottomConstraint = titleLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -UX.titleVerticalLongPadding)
+        NSLayoutConstraint.activate([
+            titleLabel.leftAnchor.constraint(equalTo: contentView.leftAnchor, constant: UX.titleHorizontalPadding),
+            titleLabel.rightAnchor.constraint(equalTo: contentView.rightAnchor, constant: -UX.titleHorizontalPadding),
+            topConstraint!,
+            bottomConstraint!
+        ])
         remakeTitleAlignmentConstraints()
     }
 
@@ -122,17 +132,11 @@ class ThemedTableSectionHeaderFooterView: UITableViewHeaderFooterView, Notificat
     fileprivate func remakeTitleAlignmentConstraints() {
         switch titleAlignment {
         case .top:
-            titleLabel.snp.remakeConstraints { make in
-                make.left.right.equalTo(self.contentView).inset(UX.titleHorizontalPadding)
-                make.top.equalTo(self.contentView).offset(UX.titleVerticalPadding)
-                make.bottom.equalTo(self.contentView).offset(-UX.titleVerticalLongPadding)
-            }
+            topConstraint?.constant = UX.titleVerticalPadding
+            bottomConstraint?.constant = -UX.titleVerticalLongPadding
         case .bottom:
-            titleLabel.snp.remakeConstraints { make in
-                make.left.right.equalTo(self.contentView).inset(UX.titleHorizontalPadding)
-                make.bottom.equalTo(self.contentView).offset(-UX.titleVerticalPadding)
-                make.top.equalTo(self.contentView).offset(UX.titleVerticalLongPadding)
-            }
+            topConstraint?.constant = UX.titleVerticalLongPadding
+            bottomConstraint?.constant = -UX.titleVerticalPadding
         }
     }
 }
@@ -143,15 +147,9 @@ class ThemedHeaderFooterViewBordersHelper: NotificationThemeable {
         case bottom
     }
 
-    fileprivate lazy var topBorder: UIView = {
-        let topBorder = UIView()
-        return topBorder
-    }()
+    fileprivate lazy var topBorder: UIView = .build()
 
-    fileprivate lazy var bottomBorder: UIView = {
-        let bottomBorder = UIView()
-        return bottomBorder
-    }()
+    fileprivate lazy var bottomBorder: UIView = .build()
 
     func showBorder(for location: BorderLocation, _ show: Bool) {
         switch location {
@@ -166,15 +164,16 @@ class ThemedHeaderFooterViewBordersHelper: NotificationThemeable {
         view.addSubview(topBorder)
         view.addSubview(bottomBorder)
 
-        topBorder.snp.makeConstraints { make in
-            make.left.right.top.equalTo(view)
-            make.height.equalTo(0.25)
-        }
-
-        bottomBorder.snp.makeConstraints { make in
-            make.left.right.bottom.equalTo(view)
-            make.height.equalTo(0.5)
-        }
+        NSLayoutConstraint.activate([
+            topBorder.leftAnchor.constraint(equalTo: view.leftAnchor),
+            topBorder.rightAnchor.constraint(equalTo: view.rightAnchor),
+            topBorder.topAnchor.constraint(equalTo: view.topAnchor),
+            topBorder.heightAnchor.constraint(equalToConstant: 0.25),
+            bottomBorder.leftAnchor.constraint(equalTo: view.leftAnchor),
+            bottomBorder.rightAnchor.constraint(equalTo: view.rightAnchor),
+            bottomBorder.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            bottomBorder.heightAnchor.constraint(equalToConstant: 0.5)
+        ])
     }
 
     func applyTheme() {

@@ -64,15 +64,19 @@ extension UIViewController {
         case .Right:
             vcToPresent.navigationItem.rightBarButtonItem = buttonItem
         }
-        let themedNavigationController = ThemedNavigationController(rootViewController: vcToPresent)
-        themedNavigationController.navigationBar.isTranslucent = false
-        if topTabsVisible {
-            themedNavigationController.preferredContentSize = CGSize(width: ViewControllerConsts.PreferredSize.IntroViewController.width, height: ViewControllerConsts.PreferredSize.IntroViewController.height)
-            themedNavigationController.modalPresentationStyle = .formSheet
+        let navController: UINavigationController
+        if #available(iOS 13.0, *) {
+            navController = DismissableNavigationViewController(rootViewController: vcToPresent)
         } else {
-            themedNavigationController.modalPresentationStyle = .fullScreen
+            navController = ThemedNavigationController(rootViewController: vcToPresent)
         }
-        self.present(themedNavigationController, animated: true, completion: nil)
+        if topTabsVisible {
+            navController.preferredContentSize = CGSize(width: ViewControllerConsts.PreferredSize.IntroViewController.width, height: ViewControllerConsts.PreferredSize.IntroViewController.height)
+            navController.modalPresentationStyle = .formSheet
+        } else {
+            navController.modalPresentationStyle = .pageSheet
+        }
+        self.present(navController, animated: true, completion: nil)
     }
     
     @objc func dismissVC() {

@@ -10,7 +10,7 @@ struct TopSitesProvider: TimelineProvider {
     public typealias Entry = TopSitesEntry
 
     func placeholder(in context: Context) -> TopSitesEntry {
-        return TopSitesEntry(date: Date(), favicons: [String: Image](), sites: [])
+        return TopSitesEntry(date: Date(), favicons: [:], sites: [])
     }
 
     func getSnapshot(in context: Context, completion: @escaping (TopSitesEntry) -> Void) {
@@ -37,7 +37,7 @@ struct TopSitesProvider: TimelineProvider {
         return image.withBackgroundAndPadding(color: color)
     }
     
-    func getTimeline(in context: Context, completion: @escaping (Timeline<TopSitesEntry>) -> Void) {
+    func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
         getSnapshot(in: context, completion: { topSitesEntry in
             let timeline = Timeline(entries: [topSitesEntry], policy: .atEnd)
             completion(timeline)
@@ -53,21 +53,20 @@ struct TopSitesEntry: TimelineEntry {
 
 fileprivate extension UIImage {
   func withBackgroundAndPadding(color: UIColor, opaque: Bool = true) -> UIImage {
-    UIGraphicsBeginImageContextWithOptions(size, opaque, scale)
-        
-    guard let ctx = UIGraphicsGetCurrentContext(), let image = cgImage else { return self }
-    defer { UIGraphicsEndImageContext() }
-        
-    // Pad the image in a bit to make the favicons look better
-    let newSize = CGSize(width: size.width - 20, height: size.height - 20)
-    let rect = CGRect(origin: .zero, size: size)
-    let imageRect = CGRect(origin: CGPoint(x: 10, y: 10), size: newSize)
-    ctx.setFillColor(color.cgColor)
-    ctx.fill(rect)
-    ctx.concatenate(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: size.height))
-    ctx.draw(image, in: imageRect)
-        
-    return UIGraphicsGetImageFromCurrentImageContext() ?? self
+    let format = UIGraphicsImageRendererFormat()
+    format.opaque = opaque
+    format.scale = scale
+
+    return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+        // Pad the image in a bit to make the favicons look better
+        let newSize = CGSize(width: size.width - 20, height: size.height - 20)
+        let rect = CGRect(origin: .zero, size: size)
+        let imageRect = CGRect(origin: CGPoint(x: 10, y: 10), size: newSize)
+        color.setFill()
+        ctx.fill(rect)
+        ctx.cgContext.concatenate(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: size.height))
+        ctx.currentImage.draw(in: imageRect)
+    }
   }
 }
 

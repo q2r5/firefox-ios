@@ -2,8 +2,6 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import Foundation
-import SnapKit
 import UIKit
 import Shared
 
@@ -16,6 +14,7 @@ protocol InactiveTabsDelegate {
     func toggleInactiveTabSection(hasExpanded: Bool)
     func didSelectInactiveTab(tab: Tab?)
     func didTapRecentlyClosed()
+    func didCloseInactiveTab(tab: Tab)
 }
 
 struct InactiveTabCellUX {
@@ -43,6 +42,7 @@ class InactiveTabCell: UICollectionViewCell, NotificationThemeable, UITableViewD
         tableView.isScrollEnabled = false
         tableView.dataSource = self
         tableView.delegate = self
+        tableView.translatesAutoresizingMaskIntoConstraints = false
         return tableView
     }()
 
@@ -63,9 +63,12 @@ class InactiveTabCell: UICollectionViewCell, NotificationThemeable, UITableViewD
     }
 
     private func setupConstraints() {
-        tableView.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-        }
+        NSLayoutConstraint.activate([
+            tableView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            tableView.topAnchor.constraint(equalTo: self.topAnchor),
+            tableView.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            tableView.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+        ])
         self.bringSubviewToFront(tableView)
     }
 
@@ -113,6 +116,21 @@ class InactiveTabCell: UICollectionViewCell, NotificationThemeable, UITableViewD
         case .none:
             return cell
         }
+    }
+
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        if !hasExpanded, InactiveTabSection(rawValue: indexPath.section) != .inactive { return nil }
+
+        let closeAction = UIContextualAction(style: .destructive, title: .CloseTabTitle) { _, _, completionHandler in
+            guard let tab = self.inactiveTabsViewModel?.inactiveTabs[indexPath.item] else {
+                completionHandler(false)
+                return
+            }
+
+            self.delegate?.didCloseInactiveTab(tab: tab)
+            completionHandler(true)
+        }
+        return UISwipeActionsConfiguration(actions: [closeAction])
     }
 
     func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
@@ -223,29 +241,20 @@ class InactiveTabHeader: UITableViewHeaderFooterView, NotificationThemeable {
         }
     }
     
-    lazy var containerView: UIView = {
-        let containerView = UIView()
-        return titleLabel
-    }()
-    
-    lazy var titleLabel: UILabel = {
-        let titleLabel = UILabel()
+    lazy var titleLabel: UILabel = .build { titleLabel in
         titleLabel.text = self.title
         titleLabel.textColor = UIColor.theme.homePanel.activityStreamHeaderText
         titleLabel.font = UIFont.systemFont(ofSize: FirefoxHomeHeaderViewUX.sectionHeaderSize, weight: .bold)
         titleLabel.minimumScaleFactor = 0.6
         titleLabel.numberOfLines = 1
         titleLabel.adjustsFontSizeToFitWidth = true
-        return titleLabel
-    }()
+    }
     
-    lazy var moreButton: UIButton = {
-        let button = UIButton()
+    lazy var moreButton: UIButton = .build { [weak self] button in
         button.isHidden = true
-        button.setImage(state?.image, for: .normal)
+        button.setImage(self?.state?.image, for: .normal)
         button.contentHorizontalAlignment = .right
-        return button
-    }()
+    }
 
     var title: String? {
         willSet(newTitle) {
@@ -273,17 +282,14 @@ class InactiveTabHeader: UITableViewHeaderFooterView, NotificationThemeable {
         contentView.addSubview(titleLabel)
         contentView.addSubview(moreButton)
         
-        moreButton.snp.makeConstraints { make in
-            make.centerX.equalToSuperview()
-            make.leading.equalTo(titleLabel.snp.trailing)
-            let insetValue = UIDevice.current.userInterfaceIdiom == .pad ? 8 : 12
-            make.trailing.equalTo(self.safeArea.trailing).inset(insetValue)
-        }
+        NSLayoutConstraint.activate([
+            moreButton.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+            moreButton.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor),
+            moreButton.trailingAnchor.constraint(equalTo: self.safeAreaLayoutGuide.trailingAnchor, constant: UIDevice.current.userInterfaceIdiom == .pad ? -8 : -12),
+            titleLabel.leadingAnchor.constraint(equalTo: self.safeAreaLayoutGuide.leadingAnchor, constant: 5),
+            titleLabel.centerXAnchor.constraint(equalTo: self.centerXAnchor)
+        ])
         moreButton.setContentCompressionResistancePriority(.required, for: .horizontal)
-        titleLabel.snp.makeConstraints { make in
-            make.leading.equalTo(self.safeArea.leading).inset(5)
-            make.centerX.equalToSuperview()
-        }
         
         applyTheme()
     }

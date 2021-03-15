@@ -30,11 +30,13 @@ protocol URLBarDelegate: AnyObject {
     /// - returns: whether the long-press was handled by the delegate; i.e. return `false` when the conditions for even starting handling long-press were not satisfied
     func urlBarDidLongPressReaderMode(_ urlBar: URLBarView) -> Bool
     func urlBarDidLongPressReload(_ urlBar: URLBarView, from button: UIButton)
+    func urlBarReloadContextMenu(_ suggested: [UIMenuElement]?) -> UIMenu?
     func urlBarDidPressStop(_ urlBar: URLBarView)
     func urlBarDidPressReload(_ urlBar: URLBarView)
     func urlBarDidEnterOverlayMode(_ urlBar: URLBarView)
     func urlBarDidLeaveOverlayMode(_ urlBar: URLBarView)
     func urlBarDidLongPressLocation(_ urlBar: URLBarView)
+    func urlBarLocationContextMenu(_ suggested: [UIMenuElement]?) -> UIMenu?
     func urlBarDidPressQRButton(_ urlBar: URLBarView)
     func urlBarDidPressPageOptions(_ urlBar: URLBarView, from button: UIButton)
     func urlBarDidTapShield(_ urlBar: URLBarView)
@@ -81,6 +83,7 @@ class URLBarView: UIView {
 
     var toolbarIsShowing = false
     var topTabsIsShowing = false
+    var isBottomToolbar = false
 
     var locationTextField: ToolbarTextField?
 
@@ -194,7 +197,7 @@ class URLBarView: UIView {
     
     fileprivate let privateModeBadge = BadgeWithBackdrop(imageName: "privateModeBadge", backdropCircleColor: UIColor.Defaults.MobilePrivatePurple)
     fileprivate let appMenuBadge = BadgeWithBackdrop(imageName: "menuBadge")
-    fileprivate let warningMenuBadge = BadgeWithBackdrop(imageName: "menuWarning", imageMask: "warning-mask")
+    fileprivate let warningMenuBadge = BadgeWithBackdrop(imageName: "menuWarning", imageMask: "warning-mask", imageTint: .Photon.Yellow60)
 
     init(profile: Profile) {
         self.profile = profile
@@ -219,6 +222,9 @@ class URLBarView: UIView {
          homeButton, bookmarksButton, appMenuButton, addNewTabButton, forwardButton, backButton, multiStateButton, locationContainer].forEach {
             addSubview($0)
         }
+
+        multiStateButton.addInteraction(UIContextMenuInteraction(delegate: self))
+        locationView.addInteraction(UIContextMenuInteraction(delegate: self))
 
         addSubview(searchIconImageView)
         updateSearchEngineImage()
@@ -360,6 +366,9 @@ class URLBarView: UIView {
                     } else {
                         make.trailing.equalTo(self.addNewTabButton.snp.leading).offset(-URLBarViewUX.Padding)
                     }
+                } else if self.isBottomToolbar {
+                    make.leading.equalTo(self).inset(URLBarViewUX.LocationLeftPadding-1)
+                    make.trailing.equalTo(self.tabsButton.snp.leading).offset(-URLBarViewUX.Padding)
                 } else {
                     // Otherwise, left align the location view
                     make.leading.trailing.equalTo(self).inset(UIEdgeInsets(top: 0, left: URLBarViewUX.LocationLeftPadding-1, bottom: 0, right: URLBarViewUX.LocationLeftPadding-1))
@@ -533,6 +542,11 @@ class URLBarView: UIView {
         backButton.isHidden = !toolbarIsShowing
         tabsButton.isHidden = !toolbarIsShowing || topTabsIsShowing
         multiStateButton.isHidden = !toolbarIsShowing
+
+        if isBottomToolbar {
+            appMenuButton.isHidden = false
+            tabsButton.isHidden = false
+        }
     }
 
     func transitionToOverlay(_ didCancel: Bool = false) {
@@ -586,7 +600,16 @@ class URLBarView: UIView {
             $0.badge.alpha = (!toolbarIsShowing || inOverlayMode) ? 0 : 1
             $0.backdrop.alpha = (!toolbarIsShowing || inOverlayMode) ? 0 : BadgeWithBackdrop.backdropAlpha
         }
-        
+
+        if isBottomToolbar {
+            appMenuButton.isHidden = inOverlayMode
+            tabsButton.isHidden = inOverlayMode
+            // badge isHidden is tied to private mode on/off, use alpha to hide in this case
+            [privateModeBadge, appMenuBadge, warningMenuBadge].forEach {
+                $0.badge.alpha = inOverlayMode ? 0 : 1
+                $0.backdrop.alpha = inOverlayMode ? 0 : BadgeWithBackdrop.backdropAlpha
+            }
+        }
     }
 
     func animateToOverlayState(overlayMode overlay: Bool, didCancel cancel: Bool = false) {
@@ -673,6 +696,8 @@ extension URLBarView: TabToolbarProtocol {
             } else {
                 if toolbarIsShowing {
                     return [backButton, forwardButton, multiStateButton, locationView, tabsButton, homeButton, bookmarksButton, appMenuButton, addNewTabButton, progressBar]
+                } else if isBottomToolbar {
+                    return [locationView, tabsButton, appMenuButton, progressBar]
                 } else {
                     return [locationView, progressBar]
                 }
@@ -687,6 +712,10 @@ extension URLBarView: TabToolbarProtocol {
 extension URLBarView: TabLocationViewDelegate {
     func tabLocationViewDidLongPressReaderMode(_ tabLocationView: TabLocationView) -> Bool {
         return delegate?.urlBarDidLongPressReaderMode(self) ?? false
+    }
+
+    func tabLocationViewReloadContextMenu() -> UIContextMenuConfiguration {
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: self.delegate?.urlBarReloadContextMenu)
     }
 
     func tabLocationViewDidLongPressReload(_ tabLocationView: TabLocationView) {
@@ -779,6 +808,20 @@ extension URLBarView: AutocompleteTextFieldDelegate {
         if let pasteboardContents = UIPasteboard.general.string {
             self.delegate?.urlBar(self, didSubmitText: pasteboardContents)
         }
+    }
+}
+
+extension URLBarView: UIContextMenuInteractionDelegate {
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
+        if multiStateButton.point(inside: location, with: nil) {
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: self.delegate?.urlBarReloadContextMenu)
+        } else if locationView.point(inside: location, with: nil) {
+            if locationView.reloadButton.point(inside: location, with: nil) {
+                return nil
+            }
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: self.delegate?.urlBarLocationContextMenu)
+        }
+        return nil
     }
 }
 

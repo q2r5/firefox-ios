@@ -7,7 +7,8 @@ import Shared
 import Account
 import SwiftKeychainWrapper
 import LocalAuthentication
-import MozillaAppServices
+import Glean
+import Sentry
 
 // This file contains all of the settings available in the main settings screen of the app.
 
@@ -189,13 +190,15 @@ class SyncNowSetting: WithAccountSetting {
     }()
 
     fileprivate lazy var warningIcon: UIImageView = {
-        let imageView = UIImageView(image: UIImage(named: "AmberCaution"))
+        let imageView = UIImageView(image: UIImage(named: "warning"))
+        imageView.tintColor = UIColor.Photon.Yellow60
         imageView.sizeToFit()
         return imageView
     }()
 
     fileprivate lazy var errorIcon: UIImageView = {
-        let imageView = UIImageView(image: UIImage(named: "RedCaution"))
+        let imageView = UIImageView(image: UIImage(named: "warning"))
+        imageView.tintColor = UIColor.Photon.Red60
         imageView.sizeToFit()
         return imageView
     }()

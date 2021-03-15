@@ -79,8 +79,8 @@ enum ReaderModeFontType: String {
         } 
     }
     
-    func isSameFamily(_ font: ReaderModeFontType) -> Bool {        
-        return !FontFamily.families.filter { $0.contains(font) && $0.contains(self) }.isEmpty        
+    func isSameFamily(_ font: ReaderModeFontType) -> Bool {
+        return !FontFamily.families.filter { $0.contains(font) && $0.contains(self) }.isEmpty
     }
 }
 
@@ -348,9 +348,7 @@ class ReaderMode: TabContentScript {
     var style: ReaderModeStyle = DefaultReaderModeStyle {
         didSet {
             if state == ReaderModeState.active {
-                tab?.webView?.evaluateJavascriptInDefaultContentWorld("\(ReaderModeNamespace).setStyle(\(style.encode()))") { object, error in
-                    return
-                }
+                tab?.webView?.evaluateJavascriptInDefaultContentWorld("\(ReaderModeNamespace).setStyle(\(style.encode()))")
             }
         }
     }

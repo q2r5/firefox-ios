@@ -5,6 +5,7 @@
 import Foundation
 import Shared
 import Account
+import ObjcExceptionBridging
 import XCGLogger
 import SwiftyJSON
 
@@ -166,7 +167,7 @@ private func optionalIntegerHeader(_ input: AnyObject?) -> Int64? {
     }
 
     if let val = input as? String {
-        return Scanner(string: val).scanLongLong()
+        return Scanner(string: val).scanInt64()
     }
 
     if let val: Double = input as? Double {
@@ -188,7 +189,7 @@ private func optionalUIntegerHeader(_ input: AnyObject?) -> Timestamp? {
     }
 
     if let val = input as? String {
-        return Scanner(string: val).scanUnsignedLongLong()
+        return Scanner(string: val).scanUInt64()
     }
 
     if let val: Double = input as? Double {
@@ -502,7 +503,7 @@ open class Sync15StorageClient {
 
         // Special case "": we want /1.5/1234567 and not /1.5/1234567/.  See note about trailing slashes above.
         let url: URL
-        if path == "" {
+        if path.isEmpty {
             url = self.serverURI // No trailing slash.
         } else {
             url = self.serverURI.appendingPathComponent(path)
@@ -637,7 +638,7 @@ open class Sync15StorageClient {
 private let DefaultInfoConfiguration = InfoConfiguration(maxRequestBytes: 1_048_576,
                                                          maxPostRecords: 100,
                                                          maxPostBytes: 1_048_576,
-                                                         maxTotalRecords: 1666,
+                                                         maxTotalRecords: 1664,
                                                          maxTotalBytes: 104_857_600)
 
 /**

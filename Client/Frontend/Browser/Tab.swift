@@ -89,6 +89,14 @@ class Tab: NSObject {
     // Tab Groups
     var tabGroupData: TabGroupData = TabGroupData(searchTerm: "", searchUrl: "", nextReferralUrl: "", tabHistoryCurrentState: TabGroupTimerState.none.rawValue , tabGroupTimerState: TabGroupTimerState.none.rawValue)
     
+    struct TabGroupLastUpdatedObservation {
+        var keyUrl: String?
+        var referrerUrl: String?
+        var searchTerm: String?
+    }
+    
+    var lastObservation: TabGroupLastUpdatedObservation = TabGroupLastUpdatedObservation()
+    
     var tabGroupsTimerHelper = StopWatchTimer()
     var shouldResetTabGroupData: Bool = false
     
@@ -205,6 +213,13 @@ class Tab: NSObject {
         return false
     }
 
+    var isSecureConnection: Bool {
+        let secure = webView?.hasOnlySecureContent ?? false
+        guard let profile = self.browserViewController?.profile,
+              let origin = webView?.url?.originForCertificate else { return secure }
+        return secure && (!profile.certStore.hasAddedCertificate(forOrigin: origin))
+    }
+
     var mimeType: String?
     var isEditing: Bool = false
     var currentFaviconUrl: URL?
@@ -264,10 +279,17 @@ class Tab: NSObject {
     }
     
     var readerModeAvailableOrActive: Bool {
-        if let readerMode = self.getContentScript(name: "ReaderMode") as? ReaderMode {
+        if mimeType == MIMEType.HTML,
+           let readerMode = self.getContentScript(name: "ReaderMode") as? ReaderMode {
             return readerMode.state != .unavailable
         }
         return false
+    }
+
+    fileprivate(set) var pageZoom: CGFloat = 1.0 {
+        didSet {
+            webView?.setValue(pageZoom, forKey: "viewScale")
+        }
     }
 
     fileprivate(set) var screenshot: UIImage?
@@ -322,7 +344,8 @@ class Tab: NSObject {
                 // reset tab group
                 tabGroupData = TabGroupData(searchTerm: "", searchUrl: "", nextReferralUrl: "", tabHistoryCurrentState: TabGroupTimerState.none.rawValue , tabGroupTimerState: TabGroupTimerState.none.rawValue)
                 shouldResetTabGroupData = true
-            } else if tabGroupData.tabAssociatedNextUrl.isEmpty {
+            // To also capture any server redirects we check if user spent less than 7 sec on the same website before moving to another one
+            } else if tabGroupData.tabAssociatedNextUrl.isEmpty || tabGroupsTimerHelper.elapsedTime < 7 {
                 let key = tabGroupData.tabHistoryMetadatakey()
                 if key.referrerUrl != nextUrl {
                     let observation = HistoryMetadataObservation(url: key.url, referrerUrl: key.referrerUrl, searchTerm: key.searchTerm, viewTime: tabGroupsTimerHelper.elapsedTime, documentType: nil, title: nil)
@@ -402,6 +425,7 @@ class Tab: NSObject {
             configuration.userContentController = WKUserContentController()
             configuration.allowsInlineMediaPlayback = true
             let webView = TabWebView(frame: .zero, configuration: configuration)
+            webView.translatesAutoresizingMaskIntoConstraints = false
             webView.delegate = self
 
             webView.accessibilityLabel = .WebViewAccessibilityLabel
@@ -468,7 +492,7 @@ class Tab: NSObject {
         func checkTabCount(failures: Int) {
             // Need delay for pool to drain.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if appDelegate.tabManager.remoteTabs.count == debugTabCount {
+                if appDelegate.tabManager.tabs.count == debugTabCount {
                     return
                 }
 
@@ -527,15 +551,22 @@ class Tab: NSObject {
     var displayTitle: String {
         if let title = webView?.title, !title.isEmpty {
             let key = tabGroupData.tabHistoryMetadatakey()
-            if tabGroupData.tabHistoryCurrentState == TabGroupTimerState.navSearchLoaded.rawValue ||
+            if  lastObservation.keyUrl == key.url &&
+                    lastObservation.referrerUrl == key.referrerUrl &&
+                    lastObservation.searchTerm == key.searchTerm {
+                return title
+            } else if tabGroupData.tabHistoryCurrentState == TabGroupTimerState.navSearchLoaded.rawValue ||
                 tabGroupData.tabHistoryCurrentState == TabGroupTimerState.tabNavigatedToDifferentUrl.rawValue ||
                 tabGroupData.tabHistoryCurrentState == TabGroupTimerState.openInNewTab.rawValue {
                 let observation = HistoryMetadataObservation(url: key.url, referrerUrl: key.referrerUrl, searchTerm: key.searchTerm, viewTime: nil, documentType: nil, title: title)
-                updateObservationForKey(key: key, observation: observation)
+                    updateObservationForKey(key: key, observation: observation)
+                lastObservation.keyUrl = key.url
+                lastObservation.referrerUrl = key.referrerUrl
+                lastObservation.searchTerm = key.searchTerm
             }
             return title
         }
-
+        
         // When picking a display title. Tabs with sessionData are pending a restore so show their old title.
         // To prevent flickering of the display title. If a tab is restoring make sure to use its lastTitle.
         if let url = self.url, InternalURL(url)?.isAboutHomeURL ?? false, sessionData == nil, !restoring {
@@ -626,8 +657,42 @@ class Tab: NSObject {
         self.webView?.scrollView.refreshControl?.endRefreshing()
     }
     
-    func addContentScript(_ helper: TabContentScript, name: String) {
-        contentScriptManager.addContentScript(helper, name: name, forTab: self)
+    func addContentScript(_ helper: TabContentScript, name: String, in contentWorld: WKContentWorld = .defaultClient) {
+        contentScriptManager.addContentScript(helper, name: name, forTab: self, in: contentWorld)
+    }
+
+    @objc func zoomIn() {
+        switch pageZoom {
+        case 0.75:
+            pageZoom = 0.85
+        case 0.85:
+            pageZoom = 1.0
+        case 1.0:
+            pageZoom = 1.15
+        case 1.15:
+            pageZoom = 1.25
+        case 3.0:
+            return
+        default:
+            pageZoom += 0.25
+        }
+    }
+
+    @objc func zoomOut() {
+        switch pageZoom {
+        case 0.5:
+            return
+        case 0.85:
+            pageZoom = 0.75
+        case 1.0:
+            pageZoom = 0.85
+        case 1.15:
+            pageZoom = 1.0
+        case 1.25:
+            pageZoom = 1.15
+        default:
+            pageZoom -= 0.25
+        }
     }
 
     func getContentScript(name: String) -> TabContentScript? {
@@ -818,7 +883,7 @@ private class TabContentScriptManager: NSObject, WKScriptMessageHandler {
         }
     }
 
-    func addContentScript(_ helper: TabContentScript, name: String, forTab tab: Tab) {
+    func addContentScript(_ helper: TabContentScript, name: String, forTab tab: Tab, in contentWorld: WKContentWorld) {
         if let _ = helpers[name] {
             assertionFailure("Duplicate helper added: \(name)")
         }
@@ -828,7 +893,7 @@ private class TabContentScriptManager: NSObject, WKScriptMessageHandler {
         // If this helper handles script messages, then get the handler name and register it. The Browser
         // receives all messages and then dispatches them to the right TabHelper.
         if let scriptMessageHandlerName = helper.scriptMessageHandlerName() {
-            tab.webView?.configuration.userContentController.addInDefaultContentWorld(scriptMessageHandler: self, name: scriptMessageHandlerName)
+            tab.webView?.configuration.userContentController.add(self, contentWorld: contentWorld, name: scriptMessageHandlerName)
         }
     }
 

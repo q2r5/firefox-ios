@@ -33,7 +33,8 @@ class EnhancedTrackingProtectionMenuVM {
     }
 
     var connectionSecure: Bool {
-        return tab.webView?.hasOnlySecureContent ?? false
+        return (tab.isSecureConnection)
+            && (trust != nil && SecTrustEvaluateWithError(trust!, nil))
     }
 
     var isSiteETPEnabled: Bool {
@@ -48,6 +49,10 @@ class EnhancedTrackingProtectionMenuVM {
     var globalETPIsEnabled: Bool {
         return FirefoxTabContentBlocker.isTrackingProtectionEnabled(prefs: profile.prefs)
     }
+    
+    private var trust: SecTrust? {
+        return tab.webView?.serverTrust
+    }
 
     // MARK: - Initializers
 
@@ -55,20 +60,18 @@ class EnhancedTrackingProtectionMenuVM {
         self.tab = tab
         self.profile = profile
         self.tabManager = tabManager
-        
     }
 
     // MARK: - Functions
 
     func getDetailsViewModel(withCachedImage cachedImage: UIImage?) -> EnhancedTrackingProtectionDetailsVM {
-        let verifier = String(format: .TPDetailsVerifiedBy, "EXAMPLE VERIFIER")
         return EnhancedTrackingProtectionDetailsVM(topLevelDomain: websiteTitle,
                                                    title: tab.displayTitle,
-                                                   image: cachedImage ?? UIImage(imageLiteralResourceName: "defaulFavicon"),
+                                                   image: cachedImage ?? UIImage(imageLiteralResourceName: "defaultFavicon"),
                                                    URL: tab.url?.absoluteDisplayString ?? websiteTitle,
                                                    lockIcon: connectionStatusImage,
                                                    connectionStatusMessage: connectionStatusString,
-                                                   connectionVerifier: verifier,
+                                                   connectionVerifier: verifyCertificate(),
                                                    connectionSecure: connectionSecure)
     }
 
@@ -79,5 +82,29 @@ class EnhancedTrackingProtectionMenuVM {
         ContentBlocker.shared.safelist(enable: tab.contentBlocker?.status != .safelisted, url: currentURL) {
             self.tab.reload()
         }
+    }
+
+    func verifyCertificate() -> String {
+        guard let trust = tab.webView?.serverTrust,
+              let certChain = SecTrustCopyCertificateChain(trust) as? [SecCertificate] else {
+                  return ""
+              }
+        
+        var error = CFErrorCreate(nil, "" as CFErrorDomain, 0, nil)
+        let validity = SecTrustEvaluateWithError(trust, &error)
+        if !validity,
+           let nsError = error as Error? as NSError?, // Workaround SR-3206
+           let underlyingError = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+            return underlyingError.localizedDescription
+        }
+
+
+        var summaryString: String = ""
+        if let cert = certChain.last,
+           let summary = SecCertificateCopySubjectSummary(cert) {
+            summaryString = summary as String
+        }
+
+        return String(format: .TPDetailsVerifiedBy, summaryString)
     }
 }

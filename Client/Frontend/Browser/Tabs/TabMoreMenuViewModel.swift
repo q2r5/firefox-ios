@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import Foundation
+import UIKit
 import Shared
 import Storage
 
@@ -44,7 +44,14 @@ class TabMoreMenuViewModel: NSObject {
             return
         }
 
-        let devicePickerViewController = DevicePickerViewController()
+        let devicePickerViewController: DevicePicker
+        if #available(iOS 14.0, *) {
+            let newPicker = NewDevicePickerViewController()
+            newPicker.newPickerDelegate = bvc
+            devicePickerViewController = newPicker
+        } else {
+            devicePickerViewController = DevicePickerViewController()
+        }
         devicePickerViewController.pickerDelegate = bvc
         devicePickerViewController.profile = self.profile
         devicePickerViewController.profileNeedsShutdown = false

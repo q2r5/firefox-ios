@@ -54,7 +54,7 @@
 - (void)modByInteger:(int)mod {
 	if (mod != 0) {
 		if (mod < 0) { mod *= -1; }
-		int result = BN_mod_word([self bigNumber], mod);
+		int result = (int)BN_mod_word([self bigNumber], mod);
 		[self setIntegerValue:result];
 	}
 }

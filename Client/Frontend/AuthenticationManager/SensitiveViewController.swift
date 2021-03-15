@@ -3,7 +3,6 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import UIKit
-import SnapKit
 import Shared
 
 class SensitiveViewController: UIViewController {
@@ -16,24 +15,24 @@ class SensitiveViewController: UIViewController {
         super.viewWillAppear(animated)
 
         willEnterForegroundNotificationObserver = NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { [self] notification in
-            if !self.isAuthenticated {
+            if !isAuthenticated {
                 AppAuthenticator.authenticateWithDeviceOwnerAuthentication { [self] result in
                     switch result {
                         case .success():
-                            self.isAuthenticated = false
-                            self.removedBlurredOverlay()
+                            isAuthenticated = false
+                            removedBlurredOverlay()
                         case .failure(_):
-                            self.isAuthenticated = false
-                            self.navigationController?.dismiss(animated: true, completion: nil)
-                            self.dismiss(animated: true)
+                            isAuthenticated = false
+                            navigationController?.dismiss(animated: true, completion: nil)
+                            dismiss(animated: true)
                     }
                 }
             }
         }
 
         didEnterBackgroundNotificationObserver = NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [self] notification in
-            self.isAuthenticated = false
-            self.installBlurredOverlay()
+            isAuthenticated = false
+            installBlurredOverlay()
         }
     }
     
@@ -52,20 +51,27 @@ class SensitiveViewController: UIViewController {
 
 extension SensitiveViewController {
     private func installBlurredOverlay() {
-        if self.blurredOverlay == nil {
-            if let snapshot = view.screenshot() {
-                let blurredSnapshot = snapshot.applyBlur(withRadius: 10, blurType: BOXFILTER, tintColor: UIColor(white: 1, alpha: 0.3), saturationDeltaFactor: 1.8, maskImage: nil)
-                let blurredOverlay = UIImageView(image: blurredSnapshot)
-                self.blurredOverlay = blurredOverlay
-                view.addSubview(blurredOverlay)
-                blurredOverlay.snp.makeConstraints { $0.edges.equalTo(self.view) }
-                view.layoutIfNeeded()
-            }
+        if blurredOverlay == nil {
+            let snapshot = view.screenshot()
+            let blurredSnapshot = snapshot.applyBlur(withRadius: 10, blurType: BOXFILTER, tintColor: UIColor(white: 1, alpha: 0.3), saturationDeltaFactor: 1.8, maskImage: nil)
+            let blurredOverlay = UIImageView(image: blurredSnapshot)
+            blurredOverlay.translatesAutoresizingMaskIntoConstraints = false
+            self.blurredOverlay = blurredOverlay
+            view.addSubview(blurredOverlay)
+
+            NSLayoutConstraint.activate([
+                blurredOverlay.leftAnchor.constraint(equalTo: view.leftAnchor),
+                blurredOverlay.topAnchor.constraint(equalTo: view.topAnchor),
+                blurredOverlay.rightAnchor.constraint(equalTo: view.rightAnchor),
+                blurredOverlay.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            ])
+
+            view.layoutIfNeeded()
         }
     }
 
     private func removedBlurredOverlay() {
-        self.blurredOverlay?.removeFromSuperview()
-        self.blurredOverlay = nil
+        blurredOverlay?.removeFromSuperview()
+        blurredOverlay = nil
     }
 }

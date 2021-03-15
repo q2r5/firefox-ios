@@ -103,7 +103,7 @@ class ActivityStreamTest: BaseTestCase {
         
 //        navigator.performAction(Action.PinToTopSitesPAM)
         app.buttons["TabLocationView.pageOptionsButton"].tap()
-        app.cells["action_pin"].tap()
+        app.buttons["action_pin"].tap()
         // Workaround to have visited website in top sites
         navigator.performAction(Action.AcceptRemovingAllTabs)
         navigator.performAction(Action.CloseURLBarOpen)

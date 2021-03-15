@@ -97,6 +97,10 @@ class SiteTableViewController: UIViewController, UITableViewDelegate, UITableVie
         
         // Set an empty footer to prevent empty cells from appearing in the list.
         table.tableFooterView = UIView()
+        
+        if #available(iOS 15.0, *) {
+            table.sectionHeaderTopPadding = 0
+        }
     }
 
     private override init(nibName: String?, bundle: Bundle?) {
@@ -106,7 +110,6 @@ class SiteTableViewController: UIViewController, UITableViewDelegate, UITableVie
     init(profile: Profile) {
         self.profile = profile
         super.init(nibName: nil, bundle: nil)
-        applyTheme()
     }
 
     required init?(coder aDecoder: NSCoder) {
@@ -152,6 +155,7 @@ class SiteTableViewController: UIViewController, UITableViewDelegate, UITableVie
             print("Err: \(data.statusMessage)", terminator: "\n")
         } else {
             self.tableView.reloadData()
+            self.applyTheme()
         }
     }
 
@@ -199,7 +203,7 @@ class SiteTableViewController: UIViewController, UITableViewDelegate, UITableVie
 
         tableView.backgroundColor = UIColor.theme.homePanel.panelBackground
         tableView.separatorColor = UIColor.theme.tableView.separator
-        if let rows = tableView.indexPathsForVisibleRows {
+        if let rows = tableView.indexPathsForVisibleRows, !rows.isEmpty {
             tableView.reloadRows(at: rows, with: .none)
             tableView.reloadSections(IndexSet(rows.map { $0.section }), with: .none)
         }

@@ -34,22 +34,18 @@ class ItemListCell: UITableViewCell {
         
         backgroundColor = UIColor.CredentialProvider.cellBackgroundColor
         contentView.addSubview(titleLabel)
-        titleLabel.snp.makeConstraints { make in
-            make.leading.equalToSuperview().offset(14)
-            make.top.equalToSuperview().offset(10)
-        }
         contentView.addSubview(detailLabel)
-        detailLabel.snp.makeConstraints { make in
-            make.top.equalTo(titleLabel.snp_bottomMargin).offset(8)
-            make.leading.equalToSuperview().offset(14)
-        }
-        
         contentView.addSubview(separatorView)
-        separatorView.snp.makeConstraints { make in
-            make.bottom.equalToSuperview()
-            make.width.equalToSuperview()
-            make.height.equalTo(0.8)
-        }
+        
+        NSLayoutConstraint.activate([
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 14),
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 10),
+            detailLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            detailLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 14),
+            separatorView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            separatorView.widthAnchor.constraint(equalTo: contentView.widthAnchor),
+            separatorView.heightAnchor.constraint(equalToConstant: 0.8)
+        ])
     }
 
     required init?(coder aDecoder: NSCoder) {

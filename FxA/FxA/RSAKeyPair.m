@@ -68,7 +68,7 @@
 
 - (NSDictionary*) JSONRepresentation
 {
-    BIGNUM *n, *d;
+    const BIGNUM *n, *d;
     RSA_get0_key(_rsa, &n, NULL, &d);
     if (n == NULL || d == NULL) {
         return nil;
@@ -82,7 +82,7 @@
 
 - (NSString*) algorithm
 {
-    BIGNUM *n;
+    const BIGNUM *n;
     RSA_get0_key(_rsa, &n, NULL, NULL);
     if (n == NULL) {
         return nil;
@@ -173,7 +173,7 @@
 
 - (NSDictionary*) JSONRepresentation
 {
-    BIGNUM *n, *e;
+    const BIGNUM *n, *e;
     RSA_get0_key(_rsa, &n, &e, NULL);
     if (n == NULL || e == NULL) {
         return nil;
@@ -187,7 +187,7 @@
 
 - (NSString*) algorithm
 {
-    BIGNUM *n;
+    const BIGNUM *n;
     RSA_get0_key(_rsa, &n, NULL, NULL);
     if (n == NULL) {
         return nil;
@@ -207,7 +207,7 @@
             if (ctx != NULL) {
                 if (EVP_VerifyInit_ex(ctx, EVP_sha256(), NULL)) {
                     if (EVP_VerifyUpdate(ctx, [message bytes], [message length])) {
-                        if (EVP_VerifyFinal(ctx, [signature bytes], [signature length], pkey)) {
+                        if (EVP_VerifyFinal(ctx, [signature bytes], (int)[signature length], pkey)) {
                             verified = YES;
                         }
                     }
@@ -245,7 +245,7 @@
         BN_free(exp);
         return nil;
     }
-    BIGNUM *n, *e, *d;
+    const BIGNUM *n, *e, *d;
     RSA_get0_key(rsa, &n, &e, &d);
 
     if (n == NULL || e == NULL || d == NULL) {

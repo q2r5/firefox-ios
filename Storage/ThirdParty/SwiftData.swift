@@ -34,7 +34,9 @@
 
 import UIKit
 import Shared
+import ObjcExceptionBridging
 import XCGLogger
+import Sentry
 
 private let DatabaseBusyTimeout: Int32 = 3 * 1000
 private let log = Logger.syncLogger

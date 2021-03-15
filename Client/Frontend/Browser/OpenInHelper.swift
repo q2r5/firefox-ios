@@ -8,32 +8,37 @@ import PassKit
 import WebKit
 import QuickLook
 import Shared
+import UniformTypeIdentifiers
 
 struct MIMEType {
-    static let Bitmap = "image/bmp"
+    static let Bitmap = UTType.bmp.preferredMIMEType ?? "image/bmp"
     static let CSS = "text/css"
-    static let GIF = "image/gif"
-    static let JavaScript = "text/javascript"
-    static let JPEG = "image/jpeg"
-    static let HTML = "text/html"
+    static let GIF = UTType.gif.preferredMIMEType ?? "image/gif"
+    static let JavaScript = UTType.javaScript.preferredMIMEType ?? "text/javascript"
+    static let JPEG = UTType.jpeg.preferredMIMEType ?? "image/jpeg"
+    static let HTML = UTType.html.preferredMIMEType ?? "text/html"
     static let OctetStream = "application/octet-stream"
     static let Passbook = "application/vnd.apple.pkpass"
-    static let PDF = "application/pdf"
-    static let PlainText = "text/plain"
-    static let PNG = "image/png"
-    static let WebP = "image/webp"
+    static let PDF = UTType.pdf.preferredMIMEType ?? "application/pdf"
+    static let PlainText = UTType.plainText.preferredMIMEType ?? "text/plain"
+    static let PNG = UTType.png.preferredMIMEType ?? "image/png"
+    static let WebP = UTType.webP.preferredMIMEType ?? "image/webp"
     static let Calendar = "text/calendar"
-    static let USDZ = "model/vnd.usdz+zip"
-    static let Reality = "model/vnd.reality"
+    static let USDZ = UTType.usdz.preferredMIMEType ?? "model/vnd.usdz+zip"
+    static let Reality = UTType.realityFile.preferredMIMEType ?? "model/vnd.reality"
+    static let XML = UTType.xml.preferredMIMEType ?? "application/xml"
+    static let HEIF = UTType.heif.preferredMIMEType ?? "image/heif"
+    static let HEIC = UTType.heic.preferredMIMEType ?? "image/heic"
 
-    private static let webViewViewableTypes: [String] = [MIMEType.Bitmap, MIMEType.GIF, MIMEType.JPEG, MIMEType.HTML, MIMEType.PDF, MIMEType.PlainText, MIMEType.PNG, MIMEType.WebP]
+    private static let webViewViewableTypes: [String] = [MIMEType.Bitmap, MIMEType.GIF, MIMEType.JPEG, MIMEType.HTML, MIMEType.PDF, MIMEType.PlainText, MIMEType.PNG, MIMEType.WebP, MIMEType.HEIF, MIMEType.HEIC]
 
     static func canShowInWebView(_ mimeType: String) -> Bool {
         return webViewViewableTypes.contains(mimeType.lowercased())
     }
 
     static func mimeTypeFromFileExtension(_ fileExtension: String) -> String {
-        if let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassFilenameExtension, fileExtension as CFString, nil)?.takeRetainedValue(), let mimeType = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassMIMEType)?.takeRetainedValue() {
+        let uti = UTType.types(tag: fileExtension, tagClass: .filenameExtension, conformingTo: nil)
+        if !uti.isEmpty, let mimeType = uti[0].preferredMIMEType {
             return mimeType as String
         }
 
@@ -41,7 +46,8 @@ struct MIMEType {
     }
 
     static func fileExtensionFromMIMEType(_ mimeType: String) -> String? {
-        if let uti = UTTypeCreatePreferredIdentifierForTag(kUTTagClassMIMEType, mimeType as CFString, nil)?.takeRetainedValue(), let fileExtension = UTTypeCopyPreferredTagWithClass(uti, kUTTagClassFilenameExtension)?.takeRetainedValue() {
+        let uti = UTType.types(tag: mimeType, tagClass: .mimeType, conformingTo: nil)
+        if !uti.isEmpty, let fileExtension = uti[0].preferredFilenameExtension {
             return fileExtension as String
         }
         return nil
@@ -55,8 +61,11 @@ class DownloadHelper: NSObject {
     fileprivate let browserViewController: BrowserViewController
 
     static func requestDownload(url: URL, tab: Tab) {
-        let safeUrl = url.absoluteString.replacingOccurrences(of: "'", with: "%27")
-        tab.webView?.evaluateJavascriptInDefaultContentWorld("window.__firefox__.download('\(safeUrl)', '\(UserScriptManager.appIdToken)')")
+        tab.webView?.startDownload(using: URLRequest(url: url)) { download in
+            download.delegate = tab.browserViewController
+        }
+//        let safeUrl = url.absoluteString.replacingOccurrences(of: "'", with: "%27")
+//        tab.webView?.evaluateJavascriptInDefaultContentWorld("window.__firefox__.download('\(safeUrl)', '\(UserScriptManager.appIdToken)')")
         TelemetryWrapper.recordEvent(category: .action, method: .tap, object: .downloadLinkButton)
     }
     
@@ -85,7 +94,7 @@ class DownloadHelper: NSObject {
     }
 
     func open() {
-        guard let host = request.url?.host else {
+        guard let url = request.url, let host = url.host else {
             return
         }
 
@@ -116,7 +125,13 @@ class DownloadHelper: NSObject {
             TelemetryWrapper.recordEvent(category: .action, method: .tap, object: .downloadNowButton)
         }
 
-        let actions = [[filenameItem], [downloadFileItem]]
+        let openInItem = PhotonActionSheetItem(title: .OpenInDownloadHelperAlertOpenIn) { _, _ in
+            let helper = ShareExtensionHelper(url: url, tab: nil)
+            let controller = helper.createActivityViewController { (_, _) in }
+            self.browserViewController.present(controller, animated: true, completion: nil)
+        }
+
+        let actions = [[filenameItem], [downloadFileItem], [openInItem]]
 
         browserViewController.presentSheetWith(title: download.filename, actions: actions, on: browserViewController, from: browserViewController.urlBar, closeButtonTitle: .CancelString, suppressPopover: true)
     }
@@ -126,18 +141,34 @@ class OpenPassBookHelper: NSObject {
     fileprivate var url: URL
 
     fileprivate let browserViewController: BrowserViewController
+    fileprivate let cookieStore: WKHTTPCookieStore
+    fileprivate lazy var session = makeURLSession(userAgent: UserAgent.defaultClientUserAgent, configuration: .ephemeral)
 
-    required init?(request: URLRequest?, response: URLResponse, canShowInWebView: Bool, forceDownload: Bool, browserViewController: BrowserViewController) {
+    required init?(request: URLRequest?, response: URLResponse, cookieStore: WKHTTPCookieStore, canShowInWebView: Bool, forceDownload: Bool, browserViewController: BrowserViewController) {
         guard let mimeType = response.mimeType, mimeType == MIMEType.Passbook, PKAddPassesViewController.canAddPasses(),
             let responseURL = response.url, !forceDownload else { return nil }
         self.url = responseURL
         self.browserViewController = browserViewController
+        self.cookieStore = cookieStore
         super.init()
     }
 
     func open() {
-        guard let passData = try? Data(contentsOf: url) else { return }
+        self.cookieStore.getAllCookies { [self] cookies in
+            for cookie in cookies {
+                self.session.configuration.httpCookieStorage?.setCookie(cookie)
+            }
+            self.session.dataTask(with: self.url) { (data, response, error) in
+                guard let _ = validatedHTTPResponse(response, statusCode: 200..<300), let data = data else {
+                    self.presentErrorAlert()
+                    return
+                }
+                self.open(passData: data)
+            }.resume()
+        }
+    }
 
+    private func open(passData: Data) {
         do {
             let pass = try PKPass(data: passData)
 
@@ -147,16 +178,24 @@ class OpenPassBookHelper: NSObject {
             } else {
                 if let addController = PKAddPassesViewController(pass: pass) {
                     browserViewController.present(addController, animated: true, completion: nil)
+                } else {
+                    presentErrorAlert(pass: pass)
                 }
             }
         } catch {
-            let alertController = UIAlertController(title: .UnableToAddPassErrorTitle, message: .UnableToAddPassErrorMessage, preferredStyle: .alert)
-            alertController.addAction(UIAlertAction(title: .UnableToAddPassErrorDismiss, style: .cancel) { (action) in
-                    // Do nothing.
-            })
-            browserViewController.present(alertController, animated: true, completion: nil)
+            presentErrorAlert()
             return
         }
+    }
+    
+    private func presentErrorAlert(pass: PKPass? = nil) {
+        let detail = pass == nil ? "" : " \(pass!.localizedName) \(pass!.localizedDescription)"
+        let message = .UnableToAddPassErrorMessage + detail
+        let alertController = UIAlertController(title: .UnableToAddPassErrorTitle, message: message, preferredStyle: .alert)
+        alertController.addAction(UIAlertAction(title: .UnableToAddPassErrorDismiss, style: .cancel) { (action) in
+                // Do nothing.
+        })
+        browserViewController.present(alertController, animated: true, completion: nil)
     }
 }
 

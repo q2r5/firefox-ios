@@ -5,7 +5,6 @@
 import Foundation
 import UIKit
 import Shared
-import SnapKit
 
 class TabTableViewCell: UITableViewCell, NotificationThemeable {
     static let identifier = "tabCell"
@@ -13,14 +12,12 @@ class TabTableViewCell: UITableViewCell, NotificationThemeable {
     var websiteTitle: UILabel?
     var urlLabel: UILabel?
     
-    lazy var closeButton: UIButton = {
-        let button = UIButton()
+    let closeButton: UIButton = .build { button in
         button.setImage(UIImage.templateImageNamed("tab_close"), for: [])
         button.accessibilityIdentifier = "closeTabButtonTabTray"
         button.tintColor = UIColor.theme.tabTray.cellCloseButton
         button.sizeToFit()
-        return button
-    }()
+    }
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: .subtitle, reuseIdentifier: reuseIdentifier)
@@ -42,40 +39,40 @@ class TabTableViewCell: UITableViewCell, NotificationThemeable {
         screenshotView.layer.cornerRadius = ChronologicalTabsControllerUX.cornerRadius
         screenshotView.layer.borderWidth = 1
         screenshotView.layer.borderColor = UIColor.Photon.Grey30.cgColor
-        
-        screenshotView.snp.makeConstraints { make in
-            make.height.width.equalTo(100)
-            make.leading.equalToSuperview().offset(ChronologicalTabsControllerUX.screenshotMarginLeftRight)
-            make.top.equalToSuperview().offset(ChronologicalTabsControllerUX.screenshotMarginTopBottom)
-            make.bottom.equalToSuperview().offset(-ChronologicalTabsControllerUX.screenshotMarginTopBottom)
-        }
+        screenshotView.translatesAutoresizingMaskIntoConstraints = false
         
         websiteTitle.numberOfLines = 2
-        websiteTitle.snp.makeConstraints { make in
-            make.leading.equalTo(screenshotView.snp.trailing).offset(ChronologicalTabsControllerUX.screenshotMarginLeftRight)
-            make.top.equalToSuperview().offset(ChronologicalTabsControllerUX.textMarginTopBottom)
-            make.bottom.equalTo(urlLabel.snp.top)
-            make.trailing.equalToSuperview().offset(-16)
-        }
-
-        urlLabel.snp.makeConstraints { make in
-            make.leading.equalTo(screenshotView.snp.trailing).offset(ChronologicalTabsControllerUX.screenshotMarginLeftRight)
-            make.trailing.equalToSuperview()
-            make.top.equalTo(websiteTitle.snp.bottom).offset(3)
-            make.bottom.equalToSuperview().offset(-ChronologicalTabsControllerUX.textMarginTopBottom * CGFloat(websiteTitle.numberOfLines))
-        }
+        websiteTitle.translatesAutoresizingMaskIntoConstraints = false
+        
+        urlLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        NSLayoutConstraint.activate([
+            screenshotView.heightAnchor.constraint(equalToConstant: 100),
+            screenshotView.widthAnchor.constraint(equalToConstant: 100),
+            screenshotView.leadingAnchor.constraint(equalTo: screenshotView.superview!.leadingAnchor, constant: ChronologicalTabsControllerUX.screenshotMarginLeftRight),
+            screenshotView.topAnchor.constraint(equalTo: screenshotView.superview!.topAnchor, constant: ChronologicalTabsControllerUX.screenshotMarginTopBottom),
+            screenshotView.bottomAnchor.constraint(equalTo: screenshotView.superview!.bottomAnchor, constant: -ChronologicalTabsControllerUX.screenshotMarginTopBottom),
+            websiteTitle.leadingAnchor.constraint(equalTo: screenshotView.trailingAnchor, constant: ChronologicalTabsControllerUX.screenshotMarginLeftRight),
+            websiteTitle.topAnchor.constraint(equalTo: websiteTitle.superview!.topAnchor, constant: ChronologicalTabsControllerUX.textMarginTopBottom),
+            websiteTitle.trailingAnchor.constraint(equalTo: websiteTitle.superview!.trailingAnchor, constant: -16),
+            urlLabel.leadingAnchor.constraint(equalTo: screenshotView.trailingAnchor, constant: ChronologicalTabsControllerUX.screenshotMarginLeftRight),
+            urlLabel.trailingAnchor.constraint(equalTo: urlLabel.superview!.trailingAnchor),
+            urlLabel.topAnchor.constraint(equalTo: websiteTitle.bottomAnchor, constant: 3),
+            urlLabel.bottomAnchor.constraint(equalTo: urlLabel.superview!.bottomAnchor, constant: -ChronologicalTabsControllerUX.textMarginTopBottom * 2)
+        ])
     }
     
     // Helper method to remake title constraint
     func remakeTitleConstraint() {
         guard let websiteTitle = websiteTitle, let text = websiteTitle.text, !text.isEmpty, let screenshotView = screenshotView, let urlLabel = urlLabel else { return }
         websiteTitle.numberOfLines = 2
-        websiteTitle.snp.remakeConstraints { make in
-            make.leading.equalTo(screenshotView.snp.trailing).offset(ChronologicalTabsControllerUX.screenshotMarginLeftRight)
-            make.top.equalToSuperview().offset(ChronologicalTabsControllerUX.textMarginTopBottom)
-            make.bottom.equalTo(urlLabel.snp.top)
-            make.trailing.equalToSuperview().offset(-16)
-        }
+        NSLayoutConstraint.deactivate(websiteTitle.constraints)
+        NSLayoutConstraint.activate([
+            websiteTitle.leadingAnchor.constraint(equalTo: screenshotView.trailingAnchor, constant: ChronologicalTabsControllerUX.screenshotMarginLeftRight),
+            websiteTitle.topAnchor.constraint(equalTo: websiteTitle.superview!.topAnchor, constant: ChronologicalTabsControllerUX.textMarginTopBottom),
+            websiteTitle.trailingAnchor.constraint(equalTo: websiteTitle.superview!.trailingAnchor, constant: -16),
+            websiteTitle.bottomAnchor.constraint(equalTo: urlLabel.topAnchor)
+        ])
     }
     
     required init?(coder: NSCoder) {

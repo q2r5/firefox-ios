@@ -10,10 +10,11 @@ class ToolbarBadge: UIView {
     private let background: UIImageView
     private let badge: UIImageView
 
-    init(imageName: String, imageMask: String, size: CGFloat) {
+    init(imageName: String, imageMask: String, size: CGFloat, tint: UIColor? = nil) {
         badgeSize = size
         background = UIImageView(image: UIImage(imageLiteralResourceName: imageMask))
         badge = UIImageView(image: UIImage(imageLiteralResourceName: imageName))
+        badge.tintColor = tint
         super.init(frame: CGRect(width: badgeSize, height: badgeSize))
         addSubview(background)
         addSubview(badge)
@@ -63,14 +64,15 @@ class BadgeWithBackdrop {
         return circle
     }
 
-    init(imageName: String, imageMask: String = "badge-mask", backdropCircleColor: UIColor? = nil, backdropCircleSize: CGFloat = 40, badgeSize: CGFloat = 20) {
+    init(imageName: String, imageMask: String = "badge-mask", imageTint: UIColor? = nil, backdropCircleColor: UIColor? = nil, backdropCircleSize: CGFloat = 40, badgeSize: CGFloat = 20) {
         self.backdropCircleColor = backdropCircleColor
         self.backdropCircleSize = backdropCircleSize
-        badge = ToolbarBadge(imageName: imageName, imageMask: imageMask, size: badgeSize)
+        badge = ToolbarBadge(imageName: imageName, imageMask: imageMask, size: badgeSize, tint: imageTint)
         badge.isHidden = true
         backdrop = BadgeWithBackdrop.makeCircle(color: backdropCircleColor, size: backdropCircleSize)
         backdrop.isHidden = true
         backdrop.isUserInteractionEnabled = false
+        backdrop.translatesAutoresizingMaskIntoConstraints = false
     }
 
     func add(toParent parent: UIView) {
@@ -80,10 +82,12 @@ class BadgeWithBackdrop {
 
     func layout(onButton button: UIView) {
         badge.layout(onButton: button)
-        backdrop.snp.makeConstraints { make in
-            make.center.equalTo(button)
-            make.size.equalTo(backdropCircleSize)
-        }
+        NSLayoutConstraint.activate([
+            backdrop.centerXAnchor.constraint(equalTo: button.centerXAnchor),
+            backdrop.centerYAnchor.constraint(equalTo: button.centerYAnchor),
+            backdrop.widthAnchor.constraint(equalToConstant: backdropCircleSize),
+            backdrop.heightAnchor.constraint(equalToConstant: backdropCircleSize),
+        ])
         button.superview?.sendSubviewToBack(backdrop)
     }
 

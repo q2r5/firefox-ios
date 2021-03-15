@@ -23,10 +23,49 @@ private struct FindInPageUX {
 
 class FindInPageBar: UIView {
     weak var delegate: FindInPageBarDelegate?
-    fileprivate let searchText = UITextField()
-    fileprivate let matchCountView = UILabel()
-    fileprivate let previousButton = UIButton()
-    fileprivate let nextButton = UIButton()
+    fileprivate let searchText: UITextField = .build { textField in
+        textField.addTarget(self, action: #selector(didTextChange), for: .editingChanged)
+        textField.textColor = FindInPageUX.SearchTextColor
+        textField.font = FindInPageUX.SearchTextFont
+        textField.autocapitalizationType = .none
+        textField.autocorrectionType = .no
+        textField.inputAssistantItem.leadingBarButtonGroups = []
+        textField.inputAssistantItem.trailingBarButtonGroups = []
+        textField.enablesReturnKeyAutomatically = true
+        textField.returnKeyType = .search
+        textField.accessibilityIdentifier = "FindInPage.searchField"
+    }
+
+    fileprivate let matchCountView: UILabel = .build { label in
+        label.textColor = FindInPageUX.MatchCountColor
+        label.font = FindInPageUX.MatchCountFont
+        label.isHidden = true
+        label.accessibilityIdentifier = "FindInPage.matchCount"
+    }
+
+    fileprivate let previousButton: UIButton = .build { button in
+        button.setImage(UIImage(named: "find_previous"), for: [])
+        button.setTitleColor(FindInPageUX.ButtonColor, for: [])
+        button.accessibilityLabel = .FindInPagePreviousAccessibilityLabel
+        button.addTarget(self, action: #selector(didFindPrevious), for: .touchUpInside)
+        button.accessibilityIdentifier = "FindInPage.find_previous"
+    }
+
+    fileprivate let nextButton: UIButton = .build { button in
+        button.setImage(UIImage(named: "find_next"), for: [])
+        button.setTitleColor(FindInPageUX.ButtonColor, for: [])
+        button.accessibilityLabel = .FindInPageNextAccessibilityLabel
+        button.addTarget(self, action: #selector(didFindNext), for: .touchUpInside)
+        button.accessibilityIdentifier = "FindInPage.find_next"
+    }
+
+    fileprivate let closeButton: UIButton = .build { button in
+        button.setImage(UIImage(named: "find_close"), for: [])
+        button.setTitleColor(FindInPageUX.ButtonColor, for: [])
+        button.accessibilityLabel = .FindInPageDoneAccessibilityLabel
+        button.addTarget(self, action: #selector(didPressClose), for: .touchUpInside)
+        button.accessibilityIdentifier = "FindInPage.close"
+    }
 
     var currentResult = 0 {
         didSet {
@@ -66,86 +105,42 @@ class FindInPageBar: UIView {
 
         backgroundColor = .white
 
-        searchText.addTarget(self, action: #selector(didTextChange), for: .editingChanged)
-        searchText.textColor = FindInPageUX.SearchTextColor
-        searchText.font = FindInPageUX.SearchTextFont
-        searchText.autocapitalizationType = .none
-        searchText.autocorrectionType = .no
-        searchText.inputAssistantItem.leadingBarButtonGroups = []
-        searchText.inputAssistantItem.trailingBarButtonGroups = []
-        searchText.enablesReturnKeyAutomatically = true
-        searchText.returnKeyType = .search
-        searchText.accessibilityIdentifier = "FindInPage.searchField"
         searchText.delegate = self
-        addSubview(searchText)
 
-        matchCountView.textColor = FindInPageUX.MatchCountColor
-        matchCountView.font = FindInPageUX.MatchCountFont
-        matchCountView.isHidden = true
-        matchCountView.accessibilityIdentifier = "FindInPage.matchCount"
-        addSubview(matchCountView)
-
-        previousButton.setImage(UIImage(named: "find_previous"), for: [])
-        previousButton.setTitleColor(FindInPageUX.ButtonColor, for: [])
-        previousButton.accessibilityLabel = .FindInPagePreviousAccessibilityLabel
-        previousButton.addTarget(self, action: #selector(didFindPrevious), for: .touchUpInside)
-        previousButton.accessibilityIdentifier = "FindInPage.find_previous"
-        addSubview(previousButton)
-
-        nextButton.setImage(UIImage(named: "find_next"), for: [])
-        nextButton.setTitleColor(FindInPageUX.ButtonColor, for: [])
-        nextButton.accessibilityLabel = .FindInPageNextAccessibilityLabel
-        nextButton.addTarget(self, action: #selector(didFindNext), for: .touchUpInside)
-        nextButton.accessibilityIdentifier = "FindInPage.find_next"
-        addSubview(nextButton)
-
-        let closeButton = UIButton()
-        closeButton.setImage(UIImage(named: "find_close"), for: [])
-        closeButton.setTitleColor(FindInPageUX.ButtonColor, for: [])
-        closeButton.accessibilityLabel = .FindInPageDoneAccessibilityLabel
-        closeButton.addTarget(self, action: #selector(didPressClose), for: .touchUpInside)
-        closeButton.accessibilityIdentifier = "FindInPage.close"
-        addSubview(closeButton)
-
-        let topBorder = UIView()
+        let topBorder: UIView = .build()
         topBorder.backgroundColor = FindInPageUX.TopBorderColor
-        addSubview(topBorder)
 
-        searchText.snp.makeConstraints { make in
-            make.leading.top.bottom.equalTo(self).inset(UIEdgeInsets(top: 0, left: 8, bottom: 0, right: 0))
-        }
+        addSubviews(searchText, matchCountView, previousButton, nextButton, closeButton, topBorder)
+
+        NSLayoutConstraint.activate([
+            searchText.leadingAnchor.constraint(equalTo: self.leadingAnchor, constant: 8),
+            searchText.topAnchor.constraint(equalTo: self.topAnchor),
+            searchText.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+            matchCountView.leadingAnchor.constraint(equalTo: searchText.trailingAnchor),
+            matchCountView.centerYAnchor.constraint(equalTo: self.centerYAnchor),
+            previousButton.leadingAnchor.constraint(equalTo: matchCountView.trailingAnchor),
+            previousButton.heightAnchor.constraint(equalTo: self.heightAnchor),
+            previousButton.widthAnchor.constraint(equalTo: self.heightAnchor),
+            previousButton.centerYAnchor.constraint(equalTo: self.centerYAnchor),
+            nextButton.leadingAnchor.constraint(equalTo: previousButton.trailingAnchor),
+            nextButton.heightAnchor.constraint(equalTo: self.heightAnchor),
+            nextButton.widthAnchor.constraint(equalTo: self.heightAnchor),
+            nextButton.centerYAnchor.constraint(equalTo: self.centerYAnchor),
+            closeButton.leadingAnchor.constraint(equalTo: nextButton.trailingAnchor),
+            closeButton.heightAnchor.constraint(equalTo: self.heightAnchor),
+            closeButton.widthAnchor.constraint(equalTo: self.heightAnchor),
+            closeButton.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            closeButton.centerYAnchor.constraint(equalTo: self.centerYAnchor),
+            topBorder.heightAnchor.constraint(equalToConstant: 1),
+            topBorder.leftAnchor.constraint(equalTo: self.leftAnchor),
+            topBorder.rightAnchor.constraint(equalTo: self.rightAnchor),
+            topBorder.topAnchor.constraint(equalTo: self.topAnchor)
+        ])
+
         searchText.setContentHuggingPriority(.defaultLow, for: .horizontal)
         searchText.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-
-        matchCountView.snp.makeConstraints { make in
-            make.leading.equalTo(searchText.snp.trailing)
-            make.centerY.equalTo(self)
-        }
         matchCountView.setContentHuggingPriority(.defaultHigh, for: .horizontal)
         matchCountView.setContentCompressionResistancePriority(.defaultHigh, for: .horizontal)
-
-        previousButton.snp.makeConstraints { make in
-            make.leading.equalTo(matchCountView.snp.trailing)
-            make.size.equalTo(self.snp.height)
-            make.centerY.equalTo(self)
-        }
-
-        nextButton.snp.makeConstraints { make in
-            make.leading.equalTo(previousButton.snp.trailing)
-            make.size.equalTo(self.snp.height)
-            make.centerY.equalTo(self)
-        }
-
-        closeButton.snp.makeConstraints { make in
-            make.leading.equalTo(nextButton.snp.trailing)
-            make.size.equalTo(self.snp.height)
-            make.trailing.centerY.equalTo(self)
-        }
-
-        topBorder.snp.makeConstraints { make in
-            make.height.equalTo(1)
-            make.left.right.top.equalTo(self)
-        }
     }
 
     required init?(coder aDecoder: NSCoder) {

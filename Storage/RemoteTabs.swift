@@ -5,7 +5,7 @@
 import Foundation
 import Shared
 
-public struct ClientAndTabs: Equatable, CustomStringConvertible {
+public struct ClientAndTabs: CustomStringConvertible {
     public let client: RemoteClient
     public let tabs: [RemoteTab]
 
@@ -25,9 +25,11 @@ public struct ClientAndTabs: Equatable, CustomStringConvertible {
     }
 }
 
-public func ==(lhs: ClientAndTabs, rhs: ClientAndTabs) -> Bool {
-    return (lhs.client == rhs.client) &&
-           (lhs.tabs == rhs.tabs)
+extension ClientAndTabs: Equatable {
+    public static func ==(lhs: ClientAndTabs, rhs: ClientAndTabs) -> Bool {
+        return (lhs.client == rhs.client) &&
+               (lhs.tabs == rhs.tabs)
+    }
 }
 
 public protocol RemoteClientsAndTabs: SyncCommands {
@@ -51,7 +53,7 @@ public protocol RemoteClientsAndTabs: SyncCommands {
     func deleteClient(guid: GUID) -> Success
 }
 
-public struct RemoteTab: Equatable {
+public struct RemoteTab {
     public let clientGUID: String?
     public let URL: Foundation.URL
     public let title: String
@@ -85,13 +87,15 @@ public struct RemoteTab: Equatable {
     }
 }
 
-public func ==(lhs: RemoteTab, rhs: RemoteTab) -> Bool {
-    return lhs.clientGUID == rhs.clientGUID &&
-        lhs.URL == rhs.URL &&
-        lhs.title == rhs.title &&
-        lhs.history == rhs.history &&
-        lhs.lastUsed == rhs.lastUsed &&
-        lhs.icon == rhs.icon
+extension RemoteTab: Equatable {
+    public static func ==(lhs: RemoteTab, rhs: RemoteTab) -> Bool {
+        return lhs.clientGUID == rhs.clientGUID &&
+            lhs.URL == rhs.URL &&
+            lhs.title == rhs.title &&
+            lhs.history == rhs.history &&
+            lhs.lastUsed == rhs.lastUsed &&
+            lhs.icon == rhs.icon
+    }
 }
 
 extension RemoteTab: CustomStringConvertible {

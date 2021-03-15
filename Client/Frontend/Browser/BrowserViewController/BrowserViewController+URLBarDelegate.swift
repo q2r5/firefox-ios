@@ -5,8 +5,11 @@
 import Shared
 import Storage
 import Telemetry
+import Glean
+import UIKit
+import Sentry
 
-protocol OnViewDismissable: AnyObject {
+protocol OnViewDismissable: UIViewController {
     var onViewDismissed: (() -> Void)? { get set }
 }
 
@@ -61,7 +64,7 @@ extension BrowserViewController: URLBarDelegate, FeatureFlagsProtocol {
 
         guard self.tabTrayViewController != nil else { return }
 
-        let navigationController = ThemedDefaultNavigationController(rootViewController: tabTrayViewController!)
+        let navigationController = DismissableNavigationViewController(rootViewController: tabTrayViewController!)
         navigationController.presentationController?.delegate = tabTrayViewController
 
         self.present(navigationController, animated: true, completion: nil)
@@ -76,7 +79,7 @@ extension BrowserViewController: URLBarDelegate, FeatureFlagsProtocol {
     private func shouldShowChronTabs() -> Bool {
         var shouldShowChronTabs = false // default don't show
         let chronDebugValue = profile.prefs.boolForKey(PrefsKeys.ChronTabsPrefKey)
-        let chronLPValue = chronTabsUserResearch?.chronTabsState ?? false
+        let chronLPValue = false
 
         // Only allow chron tabs on iPhone
         if UIDevice.current.userInterfaceIdiom == .phone {
@@ -109,6 +112,67 @@ extension BrowserViewController: URLBarDelegate, FeatureFlagsProtocol {
         self.present(controller, animated: true, completion: nil)
     }
 
+    @available(iOS 14, *)
+    func getPageActionMenu() -> UIMenu {
+        guard let tab = tabManager.selectedTab, let urlString = tab.url?.absoluteString, !urlBar.inOverlayMode else { return UIMenu() }
+
+        let actionMenuPresenter: (URL, Tab, UIView, UIPopoverArrowDirection) -> Void  = { (url, tab, view, _) in
+            self.presentActivityViewController(url, tab: tab, sourceView: view, sourceRect: view.bounds, arrowDirection: .up)
+        }
+
+        let findInPageAction = {
+            self.updateFindInPageVisibility(visible: true)
+        }
+
+        let reportSiteIssue = {
+            self.openURLInNewTab(SupportUtils.URLForReportSiteIssue(self.urlBar.currentURL?.absoluteString))
+        }
+
+        let successCallback: (String, ButtonToastAction) -> Void = { (successMessage, toastAction) in
+            switch toastAction {
+            case .bookmarkPage:
+                let toast = ButtonToast(labelText: successMessage, buttonText: .BookmarksEdit, textAlignment: .left) { isButtonTapped in
+                    guard isButtonTapped,
+                          let bookmarkItems = self.profile.places.getBookmarksWithURL(url: urlString).value.successValue,
+                          !bookmarkItems.isEmpty,
+                          let folder = self.profile.places.getBookmark(guid: bookmarkItems[0].parentGUID ?? BookmarkRoots.MobileFolderGUID).value.successValue as? BookmarkFolder else {
+                        return
+                    }
+                    let editVC = BookmarkDetailPanel(profile: self.profile, bookmarkNode: bookmarkItems[0], parentBookmarkFolder: folder)
+                    let navController: UINavigationController
+                    navController = UINavigationController(rootViewController: editVC)
+                    navController.navigationBar.isTranslucent = false
+                    navController.preferredContentSize = CGSize(width: ViewControllerConsts.PreferredSize.IntroViewController.width, height: ViewControllerConsts.PreferredSize.IntroViewController.height)
+                    self.present(navController, animated: true, completion: nil)
+                }
+                self.show(toast: toast)
+            case .removeBookmark:
+                let toast = ButtonToast(labelText: successMessage, buttonText: .UndoString, textAlignment: .left) { isButtonTapped in
+                    isButtonTapped ? self.addBookmark(url: urlString) : nil
+                }
+                self.show(toast: toast)
+            default:
+                SimpleToast().showAlertWithText(successMessage, bottomContainer: self.webViewContainer)
+            }
+        }
+        
+        let completion: () -> Void = {
+            self.urlBar.locationView.pageOptionsButton.menu = self.getPageActionMenu()
+            self.urlBar.locationView.pageOptionsButton.showsMenuAsPrimaryAction = true
+        }
+
+        let isBookmarked = fetchBookmarkStatus(for: urlString).value.successValue ?? false
+        let isPinned = fetchPinnedTopSiteStatus(for: urlString).value.successValue ?? false
+        let pageActions = self.getTabMenuActions(tab: tab, presentShareMenu: actionMenuPresenter, findInPage: findInPageAction,
+                                             reportSiteIssue: reportSiteIssue, presentableVC: self,
+                                             isBookmarked: isBookmarked, isPinned: isPinned, success: successCallback, completion: completion)
+        if urlBar.isBottomToolbar {
+            return UIMenu(title: "Page Actions", image: UIImage.templateImageNamed("menu-More-Options"), children: pageActions)
+        } else {
+            return UIMenu(children: pageActions)
+        }
+    }
+
     func urlBarDidPressPageOptions(_ urlBar: URLBarView, from button: UIButton) {
         guard let tab = tabManager.selectedTab, let urlString = tab.url?.absoluteString, !urlBar.inOverlayMode else { return }
 
@@ -126,6 +190,18 @@ extension BrowserViewController: URLBarDelegate, FeatureFlagsProtocol {
 
         let successCallback: (String, ButtonToastAction) -> Void = { (successMessage, toastAction) in
             switch toastAction {
+            case .bookmarkPage:
+                let toast = ButtonToast(labelText: successMessage, buttonText: .BookmarksEdit, textAlignment: .left) { isButtonTapped in
+                    guard isButtonTapped,
+                          let bookmarkItems = self.profile.places.getBookmarksWithURL(url: urlString).value.successValue,
+                          !bookmarkItems.isEmpty,
+                          let folder = self.profile.places.getBookmark(guid: bookmarkItems[0].parentGUID ?? BookmarkRoots.MobileFolderGUID).value.successValue as? BookmarkFolder else {
+                        return
+                    }
+                    let editVC = BookmarkDetailPanel(profile: self.profile, bookmarkNode: bookmarkItems[0], parentBookmarkFolder: folder)
+                    self.present(editVC, animated: true)
+                }
+                self.show(toast: toast)
             case .removeBookmark:
                 let toast = ButtonToast(labelText: successMessage, buttonText: .UndoString, textAlignment: .left) { isButtonTapped in
                     isButtonTapped ? self.addBookmark(url: urlString) : nil
@@ -207,7 +283,7 @@ extension BrowserViewController: URLBarDelegate, FeatureFlagsProtocol {
     }
 
     func urlBarDidPressReaderMode(_ urlBar: URLBarView) {
-        libraryDrawerViewController?.close()
+        libraryViewController?.dismiss(animated: true)
 
         guard let tab = tabManager.selectedTab, let readerMode = tab.getContentScript(name: "ReaderMode") as? ReaderMode else {
             return
@@ -259,6 +335,46 @@ extension BrowserViewController: URLBarDelegate, FeatureFlagsProtocol {
         presentSheetWith(actions: [urlActions], on: self, from: button, suppressPopover: shouldSuppress)
     }
 
+    func urlBarReloadContextMenu(_ suggested: [UIMenuElement]?) -> UIMenu? {
+        guard let tab = tabManager.selectedTab,
+              tab.webView?.url != nil,
+              (tab.getContentScript(name: ReaderMode.name()) as? ReaderMode)?.state != .active else {
+            return nil
+        }
+
+        let defaultUAisDesktop = UserAgent.isDesktop(ua: UserAgent.getUserAgent())
+        let toggleActionTitle: String
+        let toggleActionImage: UIImage?
+        if defaultUAisDesktop {
+            toggleActionTitle = tab.changedUserAgent ? .AppMenuViewDesktopSiteTitleString : .AppMenuViewMobileSiteTitleString
+            toggleActionImage = tab.changedUserAgent ? UIImage.templateImageNamed("menu-RequestDesktopSite") : UIImage.templateImageNamed("menu-ViewMobile")
+        } else {
+            toggleActionTitle = tab.changedUserAgent ? .AppMenuViewMobileSiteTitleString : .AppMenuViewDesktopSiteTitleString
+            toggleActionImage = tab.changedUserAgent ? UIImage.templateImageNamed("menu-ViewMobile") : UIImage.templateImageNamed("menu-RequestDesktopSite")
+        }
+        let toggleDesktopSite = UIAction(title: toggleActionTitle, image: toggleActionImage, state: (tab.changedUserAgent ? .on : .off)) { _ in
+            if let url = tab.url {
+                tab.toggleChangeUserAgent()
+                Tab.ChangeUserAgent.updateDomainList(forUrl: url, isChangedUA: tab.changedUserAgent, isPrivate: tab.isPrivate)
+            }
+        }
+
+        if let url = tab.webView?.url, let helper = tab.contentBlocker, helper.isEnabled, helper.blockingStrengthPref == .strict {
+            let isSafelisted = helper.status == .safelisted
+
+            let title: String = !isSafelisted ? .TrackingProtectionReloadWithout : .TrackingProtectionReloadWith
+            let image = !isSafelisted ? UIImage.templateImageNamed("menu-TrackingProtection-Off") : UIImage.templateImageNamed("menu-TrackingProtection")
+            let toggleTP = UIAction(title: title, image: image) { _ in
+                ContentBlocker.shared.safelist(enable: !isSafelisted, url: url) {
+                    tab.reload()
+                }
+            }
+            return UIMenu(children: [toggleDesktopSite, toggleTP])
+        } else {
+            return UIMenu(children: [toggleDesktopSite])
+        }
+    }
+
     func locationActionsForURLBar(_ urlBar: URLBarView) -> [AccessibleAction] {
         if UIPasteboard.general.string != nil {
             return [pasteGoAction, pasteAction, copyAddressAction]
@@ -277,6 +393,33 @@ extension BrowserViewController: URLBarDelegate, FeatureFlagsProtocol {
             return (query, true)
         } else {
             return (url?.absoluteString, false)
+        }
+    }
+
+    func urlBarLocationContextMenu(_ suggested: [UIMenuElement]?) -> UIMenu? {
+        let pasteGoAction = UIAction(title: .PasteAndGoTitle) { _ in
+            if let pasteboardContents = UIPasteboard.general.string {
+                self.urlBar.delegate?.urlBar(self.urlBar, didSubmitText: pasteboardContents)
+            }
+        }
+        pasteGoAction.accessibilityIdentifier = "menu-PasteAndGo"
+        let pasteAction = UIAction(title: .PasteTitle) { _ in
+            if let pasteboardContents = UIPasteboard.general.string {
+                self.urlBar.enterOverlayMode(pasteboardContents, pasted: true, search: true)
+            }
+        }
+        pasteAction.accessibilityIdentifier = "menu-Paste"
+        let copyAddressAction = UIAction(title: .CopyAddressTitle) { _ in
+            if let url = self.tabManager.selectedTab?.canonicalURL?.displayURL ?? self.urlBar.currentURL {
+                UIPasteboard.general.url = url
+                SimpleToast().showAlertWithText(.AppMenuCopyURLConfirmMessage, bottomContainer: self.webViewContainer)
+            }
+        }
+        copyAddressAction.accessibilityIdentifier = "menu-Copy-Link"
+        if UIPasteboard.general.string != nil {
+            return UIMenu(children: [pasteGoAction, pasteAction, copyAddressAction])
+        } else {
+            return UIMenu(children: [copyAddressAction])
         }
     }
 
@@ -377,7 +520,7 @@ extension BrowserViewController: URLBarDelegate, FeatureFlagsProtocol {
     }
 
     func urlBarDidEnterOverlayMode(_ urlBar: URLBarView) {
-        libraryDrawerViewController?.close()
+        libraryViewController?.dismiss(animated: true)
         urlBar.updateSearchEngineImage()
         guard let profile = profile as? BrowserProfile else {
             return

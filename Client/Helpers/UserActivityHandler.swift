@@ -85,7 +85,7 @@ extension UserActivityHandler {
             return
         }
 
-        let attributeSet = CSSearchableItemAttributeSet(itemContentType: kUTTypeText as String)
+        let attributeSet = CSSearchableItemAttributeSet(itemContentType: UTType.text.identifier)
         attributeSet.title = page.title
 
         switch experimental.getString("description") ?? "excerpt" {

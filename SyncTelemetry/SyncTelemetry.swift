@@ -3,9 +3,9 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import Foundation
+import Shared
 import XCGLogger
 import SwiftyJSON
-import Shared
 
 private let log = Logger.browserLogger
 private let ServerURL = "https://incoming.telemetry.mozilla.org".asURL!

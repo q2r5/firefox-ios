@@ -4,8 +4,9 @@
 
 import Foundation
 import Shared
+import Sentry
 
-@_exported import MozillaAppServices
+@_exported import Places
 
 private let log = Logger.syncLogger
 

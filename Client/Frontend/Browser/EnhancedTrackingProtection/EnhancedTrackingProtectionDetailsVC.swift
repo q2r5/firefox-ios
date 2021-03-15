@@ -2,7 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import Foundation
+import UIKit
 
 class EnhancedTrackingProtectionDetailsVC: UIViewController {
 
@@ -54,7 +54,7 @@ class EnhancedTrackingProtectionDetailsVC: UIViewController {
 
     private let connectionVerifierLabel: UILabel = .build { label in
         label.font = ETPMenuUX.Fonts.minorInfoLabel
-        label.isHidden = true
+        label.isHidden = false
     }
 
     // MARK: - Variables
@@ -134,15 +134,14 @@ class EnhancedTrackingProtectionDetailsVC: UIViewController {
             connectionImage.widthAnchor.constraint(equalToConstant: 20),
 
             connectionStatusLabel.leadingAnchor.constraint(equalTo: connectionImage.trailingAnchor, constant: 28),
-//            connectionStatusLabel.topAnchor.constraint(equalTo: connectionView.topAnchor, constant: 8),
+            connectionStatusLabel.topAnchor.constraint(equalTo: connectionView.topAnchor, constant: 8),
             connectionStatusLabel.trailingAnchor.constraint(equalTo: connectionView.trailingAnchor, constant: -21),
             connectionStatusLabel.heightAnchor.constraint(equalToConstant: 22),
-            connectionStatusLabel.centerYAnchor.constraint(equalTo: connectionView.centerYAnchor)
 
-//            connectionVerifierLabel.leadingAnchor.constraint(equalTo: connectionStatusLabel.leadingAnchor),
-//            connectionVerifierLabel.bottomAnchor.constraint(equalTo: connectionView.bottomAnchor, constant: -8),
-//            connectionVerifierLabel.trailingAnchor.constraint(equalTo: connectionView.trailingAnchor, constant: -21),
-//            connectionVerifierLabel.heightAnchor.constraint(equalToConstant: 20),
+            connectionVerifierLabel.leadingAnchor.constraint(equalTo: connectionStatusLabel.leadingAnchor),
+            connectionVerifierLabel.bottomAnchor.constraint(equalTo: connectionView.bottomAnchor, constant: -8),
+            connectionVerifierLabel.trailingAnchor.constraint(equalTo: connectionView.trailingAnchor, constant: -21),
+            connectionVerifierLabel.heightAnchor.constraint(equalToConstant: 20),
         ])
     }
 
@@ -179,7 +178,6 @@ class EnhancedTrackingProtectionDetailsVC: UIViewController {
 // MARK: - Themable
 extension EnhancedTrackingProtectionDetailsVC: NotificationThemeable {
     @objc func applyTheme() {
-        overrideUserInterfaceStyle =  LegacyThemeManager.instance.userInterfaceStyle
         view.backgroundColor = UIColor.theme.etpMenu.background
         siteInfoSection.backgroundColor = UIColor.theme.etpMenu.sectionColor
         siteInfoURLLabel.textColor = UIColor.theme.etpMenu.subtextColor

@@ -4,7 +4,7 @@
 
 import Foundation
 import Shared
-import MozillaAppServices
+import Glean
 
 struct FxALaunchParams {
     var query: [String: String]
@@ -26,6 +26,7 @@ enum SettingsPage: String {
     case general = "general"
     case newtab = "newtab"
     case homepage = "homepage"
+    case tabs = "tabs"
     case mailto = "mailto"
     case search = "search"
     case clearPrivateData = "clear-private-data"
@@ -304,6 +305,9 @@ enum NavigationPath {
             let viewController = HomePageSettingViewController(prefs: baseSettingsVC.profile.prefs)
             viewController.profile = profile
             controller.pushViewController(viewController, animated: true)
+        case .tabs:
+            let viewController = TabsSettingsViewController()
+            controller.pushViewController(viewController, animated: true)
         case .mailto:
             let viewController = OpenWithSettingsViewController(prefs: profile.prefs)
             controller.pushViewController(viewController, animated: true)
@@ -333,33 +337,33 @@ enum NavigationPath {
     }
 }
 
-extension NavigationPath: Equatable {}
-
-func == (lhs: NavigationPath, rhs: NavigationPath) -> Bool {
-    switch (lhs, rhs) {
-    case let (.url(lhsURL, lhsPrivate), .url(rhsURL, rhsPrivate)):
-        return lhsURL == rhsURL && lhsPrivate == rhsPrivate
-    case let (.fxa(lhs), .fxa(rhs)):
-        return lhs.query == rhs.query
-    case let (.deepLink(lhs), .deepLink(rhs)):
-        return lhs == rhs
-    default:
-        return false
+extension NavigationPath: Equatable {
+    static func == (lhs: NavigationPath, rhs: NavigationPath) -> Bool {
+        switch (lhs, rhs) {
+        case let (.url(lhsURL, lhsPrivate), .url(rhsURL, rhsPrivate)):
+            return lhsURL == rhsURL && lhsPrivate == rhsPrivate
+        case let (.fxa(lhs), .fxa(rhs)):
+            return lhs.query == rhs.query
+        case let (.deepLink(lhs), .deepLink(rhs)):
+            return lhs == rhs
+        default:
+            return false
+        }
     }
 }
 
-extension DeepLink: Equatable {}
-
-func == (lhs: DeepLink, rhs: DeepLink) -> Bool {
-    switch (lhs, rhs) {
-    case let (.settings(lhs), .settings(rhs)):
-        return lhs == rhs
-    case let (.homePanel(lhs), .homePanel(rhs)):
-        return lhs == rhs
-    case let (.defaultBrowser(lhs), .defaultBrowser(rhs)):
-        return lhs == rhs
-    default:
-        return false
+extension DeepLink: Equatable {
+    static func == (lhs: DeepLink, rhs: DeepLink) -> Bool {
+        switch (lhs, rhs) {
+        case let (.settings(lhs), .settings(rhs)):
+            return lhs == rhs
+        case let (.homePanel(lhs), .homePanel(rhs)):
+            return lhs == rhs
+        case let (.defaultBrowser(lhs), .defaultBrowser(rhs)):
+            return lhs == rhs
+        default:
+            return false
+        }
     }
 }
 

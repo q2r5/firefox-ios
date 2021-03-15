@@ -39,6 +39,7 @@ class SnackButton: UIButton {
         }
         titleLabel?.adjustsFontForContentSizeCategory = false
         setTitle(title, for: .normal)
+        translatesAutoresizingMaskIntoConstraints = false
         setTitleColor(UIColor.theme.snackbar.highlightText, for: .highlighted)
         setTitleColor(UIColor.theme.snackbar.title, for: .normal)
         addTarget(self, action: #selector(onClick), for: .touchUpInside)
@@ -54,14 +55,15 @@ class SnackButton: UIButton {
     }
 
     func drawSeparator() {
-        let separator = UIView()
+        let separator: UIView = .build()
         separator.backgroundColor = UIColor.theme.snackbar.border
         self.addSubview(separator)
-        separator.snp.makeConstraints { make in
-            make.leading.equalTo(self)
-            make.width.equalTo(SnackBarUX.BorderWidth)
-            make.top.bottom.equalTo(self)
-        }
+        NSLayoutConstraint.activate([
+            separator.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            separator.widthAnchor.constraint(equalToConstant: SnackBarUX.BorderWidth),
+            separator.topAnchor.constraint(equalTo: self.topAnchor),
+            separator.bottomAnchor.constraint(equalTo: self.bottomAnchor)
+        ])
     }
 
 }
@@ -69,42 +71,38 @@ class SnackButton: UIButton {
 class SnackBar: UIView {
     let snackbarClassIdentifier: String
     let backgroundView = UIVisualEffectView(effect: UIBlurEffect(style: .extraLight))
-    private lazy var imageView: UIImageView = {
-        let imageView = UIImageView()
+    private lazy var imageView: UIImageView = .build { imageView in
         imageView.contentMode = .scaleAspectFit
         // These are required to make sure that the image is _never_ smaller or larger than its actual size
         imageView.setContentHuggingPriority(.required, for: .horizontal)
         imageView.setContentHuggingPriority(.required, for: .vertical)
         imageView.setContentCompressionResistancePriority(.required, for: .horizontal)
         imageView.setContentCompressionResistancePriority(.required, for: .vertical)
-        return imageView
-    }()
+    }
 
-    private lazy var textLabel: UILabel = {
-        let label = UILabel()
+    private lazy var textLabel: UILabel = .build { label in
         label.font = DynamicFontHelper.defaultHelper.DefaultStandardFont
         label.lineBreakMode = .byWordWrapping
         label.setContentCompressionResistancePriority(.required, for: .horizontal)
         label.numberOfLines = 0
-        label.textColor = UIColor.Photon.Grey90 // If making themeable, change to UIColor.theme.tableView.rowText
+        label.textColor = UIColor.Photon.Grey90 // If making NotificationThemeable, change to UIColor.theme.tableView.rowText
         label.backgroundColor = UIColor.clear
-        return label
-    }()
+    }
 
-    private lazy var buttonsView: UIStackView = {
-        let stack = UIStackView()
+    private lazy var buttonsView: UIStackView = .build { stack in
         stack.distribution = .fillEqually
-        return stack
-    }()
+    }
 
-    private lazy var titleView: UIStackView = {
-        let stack = UIStackView()
+    private lazy var titleView: UIStackView = .build { stack in
         stack.spacing = UIConstants.DefaultPadding
         stack.distribution = .fill
         stack.axis = .horizontal
         stack.alignment = .center
-        return stack
-    }()
+    }
+    
+    private lazy var separator: UIView = .build {
+        $0.backgroundColor = UIColor.theme.snackbar.border
+    }
 
     // The Constraint for the bottom of this snackbar. We use this to transition it
     var bottom: Constraint?
@@ -122,30 +120,29 @@ class SnackBar: UIView {
         titleView.addArrangedSubview(imageView)
         titleView.addArrangedSubview(textLabel)
 
-        let separator = UIView()
-        separator.backgroundColor = UIColor.theme.snackbar.border
-
         addSubview(titleView)
         addSubview(separator)
         addSubview(buttonsView)
-
-        separator.snp.makeConstraints { make in
-            make.leading.trailing.equalTo(self)
-            make.height.equalTo(SnackBarUX.BorderWidth)
-            make.top.equalTo(buttonsView.snp.top).offset(-1)
-        }
 
         backgroundView.snp.makeConstraints { make in
             make.bottom.left.right.equalTo(self)
             make.top.equalTo(self)
         }
 
-        titleView.snp.makeConstraints { make in
-            make.top.equalTo(self).offset(UIConstants.DefaultPadding)
-            make.height.greaterThanOrEqualTo(UIConstants.SnackbarButtonHeight - 2 * UIConstants.DefaultPadding)
-            make.centerX.equalTo(self).priority(500)
-            make.width.lessThanOrEqualTo(self).inset(UIConstants.DefaultPadding * 2).priority(1000)
-        }
+        NSLayoutConstraint.activate([
+            titleView.topAnchor.constraint(equalTo: self.topAnchor, constant: UIConstants.DefaultPadding),
+            titleView.heightAnchor.constraint(greaterThanOrEqualToConstant: UIConstants.SnackbarButtonHeight - 2 * UIConstants.DefaultPadding),
+            titleView.centerXAnchor.constraint(equalTo: self.centerXAnchor),
+            titleView.widthAnchor.constraint(lessThanOrEqualTo: self.widthAnchor, constant: -UIConstants.DefaultPadding * 2),
+            separator.topAnchor.constraint(equalTo: titleView.bottomAnchor),
+            separator.heightAnchor.constraint(equalToConstant: SnackBarUX.BorderWidth),
+            separator.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            separator.trailingAnchor.constraint(equalTo: self.trailingAnchor),
+            buttonsView.topAnchor.constraint(equalTo: separator.bottomAnchor),
+            buttonsView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+            buttonsView.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+            buttonsView.trailingAnchor.constraint(equalTo: self.trailingAnchor)
+        ])
 
         backgroundColor = UIColor.clear
         self.clipsToBounds = true //overridden by masksToBounds = false
@@ -170,17 +167,6 @@ class SnackBar: UIView {
 
     override func updateConstraints() {
         super.updateConstraints()
-
-        buttonsView.snp.remakeConstraints { make in
-            make.top.equalTo(titleView.snp.bottom).offset(UIConstants.DefaultPadding)
-            make.bottom.equalTo(self.snp.bottom)
-            make.leading.trailing.equalTo(self)
-            if self.buttonsView.subviews.count > 0 {
-                make.height.equalTo(UIConstants.SnackbarButtonHeight)
-            } else {
-                make.height.equalTo(0)
-            }
-        }
     }
 
     var showing: Bool {
@@ -200,6 +186,7 @@ class SnackBar: UIView {
         if buttonsView.arrangedSubviews.count != 1 {
             snackButton.drawSeparator()
         }
+        buttonsView.heightAnchor.constraint(equalToConstant: UIConstants.SnackbarButtonHeight).isActive = true
     }
 }
 

@@ -9,25 +9,25 @@ struct UX {
     static let durationToShowDoneDialog: TimeInterval = UX.doneDialogAnimationDuration + 0.8
     static let alphaForFullscreenOverlay: CGFloat = 0.3
     static let dialogCornerRadius: CGFloat = 8
-    static let topViewHeight = 364
-    static let topViewHeightForSearchMode = 160
-    static let topViewWidth = 345
-    static let viewHeightForDoneState = 170
-    static let pageInfoRowHeight = 64
-    static let actionRowHeight = 44
+    static let topViewHeight: CGFloat = 364
+    static let topViewHeightForSearchMode: CGFloat = 160
+    static let topViewWidth: CGFloat = 345
+    static let viewHeightForDoneState: CGFloat = 170
+    static let pageInfoRowHeight: CGFloat = 64
+    static let actionRowHeight: CGFloat = 44
     static let actionRowSpacingBetweenIconAndTitle: CGFloat = 16
-    static let actionRowIconSize = 24
+    static let actionRowIconSize: CGFloat = 24
     static let rowInset: CGFloat = 16
-    static let pageInfoRowLeftInset = UX.rowInset + 6
+    static let pageInfoRowLeftInset: CGFloat = UX.rowInset + 6
     static let pageInfoLineSpacing: CGFloat = 2
     static let doneLabelFont = UIFont.boldSystemFont(ofSize: 17)
     static let baseFont = UIFont.systemFont(ofSize: 15)
 
-    static let navBarLandscapeShrinkage = 10 // iOS automatically shrinks nav bar in compact landscape
+    static let navBarLandscapeShrinkage: CGFloat = 10 // iOS automatically shrinks nav bar in compact landscape
     static let numberOfActionRows = 5 // One more row than this for the page info row.
 
     // Small iPhone screens in landscape can only fit 4 rows without resizing the screen. We can fit one more row
     // by shrinking rows, so this shrinkage code is here if needed.
     static let enableResizeRowsForSmallScreens = UX.numberOfActionRows > 4
-    static let perRowShrinkageForLandscape = UX.enableResizeRowsForSmallScreens ? 8 : 0
+    static let perRowShrinkageForLandscape: CGFloat = UX.enableResizeRowsForSmallScreens ? 8 : 0
 }

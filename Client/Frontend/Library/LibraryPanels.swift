@@ -11,7 +11,7 @@ protocol LibraryPanel: NotificationThemeable {
 }
 
 struct LibraryPanelUX {
-    static let EmptyTabContentOffset = -180
+    static let EmptyTabContentOffset: CGFloat = -180
 }
 
 protocol LibraryPanelDelegate: AnyObject {
@@ -70,7 +70,7 @@ class LibraryPanelDescriptor {
         guard viewController == nil else { return }
         let viewController = makeViewController(profile)
         self.viewController = viewController
-        navigationController = ThemedNavigationController(rootViewController: viewController)
+//        navigationController = ThemedNavigationController(rootViewController: viewController)
     }
 }
 

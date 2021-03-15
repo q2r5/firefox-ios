@@ -87,9 +87,11 @@ open class Visit: Hashable {
     }
 }
 
-public func ==(lhs: Visit, rhs: Visit) -> Bool {
-    return lhs.date == rhs.date &&
-           lhs.type == rhs.type
+extension Visit: Equatable {
+    public static func ==(lhs: Visit, rhs: Visit) -> Bool {
+        return lhs.date == rhs.date &&
+               lhs.type == rhs.type
+    }
 }
 
 open class SiteVisit: Visit {
@@ -107,20 +109,21 @@ open class SiteVisit: Visit {
         self.site = site
         super.init(date: date, type: type)
     }
-}
 
-public func ==(lhs: SiteVisit, rhs: SiteVisit) -> Bool {
-    if let lhsID = lhs.id, let rhsID = rhs.id {
-        if lhsID != rhsID {
-            return false
+    public static func ==(lhs: SiteVisit, rhs: SiteVisit) -> Bool {
+        if let lhsID = lhs.id, let rhsID = rhs.id {
+            if lhsID != rhsID {
+                return false
+            }
+        } else {
+            if lhs.id != nil || rhs.id != nil {
+                return false
+            }
         }
-    } else {
-        if lhs.id != nil || rhs.id != nil {
-            return false
-        }
+
+        // TODO: compare Site.
+        return lhs.date == rhs.date &&
+               lhs.type == rhs.type &&
+               lhs.site == rhs.site
     }
-
-    // TODO: compare Site.
-    return lhs.date == rhs.date &&
-           lhs.type == rhs.type
 }

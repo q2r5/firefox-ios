@@ -5,7 +5,6 @@
 import Foundation
 import Fuzi
 import SDWebImage
-import SwiftyJSON
 import Shared
 import XCGLogger
 
@@ -33,10 +32,10 @@ private let topSitesIcons: [String : (color: UIColor, fileURL: URL)] = {
 
     let filePath = Bundle.main.path(forResource: "top_sites", ofType: "json")
     let file = try! Data(contentsOf: URL(fileURLWithPath: filePath!))
-    JSON(file).forEach({
-        guard let domain = $0.1["domain"].string,
-            let color = $0.1["background_color"].string?.lowercased(),
-            let path = $0.1["image_url"].string?.replacingOccurrences(of: ".png", with: "") else {
+    (try? JSONSerialization.jsonObject(with: file, options: .fragmentsAllowed) as? [String: [String: String]])?.forEach({
+        guard let domain = $0.1["domain"],
+            let color = $0.1["background_color"]?.lowercased(),
+            let path = $0.1["image_url"]?.replacingOccurrences(of: ".png", with: "") else {
             return
         }
 
@@ -212,22 +211,16 @@ extension SQLiteHistory: Favicons {
                 return deferMaybe(FaviconLookupError(siteURL: site.url))
             }
 
-            UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
-            defer { UIGraphicsEndImageContext() }
+            let format = UIGraphicsImageRendererFormat()
+            format.opaque = false
+            format.scale = image.scale
 
-            guard let context = UIGraphicsGetCurrentContext(),
-                let cgImage = image.cgImage else {
-                return deferMaybe(image)
-            }
-
-            let rect = CGRect(origin: .zero, size: image.size)
-            context.setFillColor(icon.color.cgColor)
-            context.fill(rect)
-            context.concatenate(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: rect.height))
-            context.draw(cgImage, in: rect)
-
-            guard let imageWithBackground = UIGraphicsGetImageFromCurrentImageContext() else {
-                return deferMaybe(image)
+            let imageWithBackground = UIGraphicsImageRenderer(size: image.size, format: format).image { ctx in
+                let rect = CGRect(origin: .zero, size: image.size)
+                icon.color.setFill()
+                ctx.fill(rect)
+                ctx.cgContext.concatenate(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: rect.height))
+                ctx.currentImage.draw(in: rect)
             }
 
             return deferMaybe(imageWithBackground)

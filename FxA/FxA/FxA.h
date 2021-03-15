@@ -19,7 +19,6 @@ FOUNDATION_EXPORT const unsigned char FxAVersionString[];
 #include <FxA/RSAKeyPair.h>
 #include <FxA/JSONWebTokenUtils.h>
 #include <FxA/NSData+Base16.h>
-#include <FxA/NSData+Base32.h>
 #include <FxA/NSData+SHA.h>
 #include <FxA/NSData+Utils.h>
 #include <FxA/NSData+KeyDerivation.h>
@@ -27,5 +26,4 @@ FOUNDATION_EXPORT const unsigned char FxAVersionString[];
 // These are all the ones the compiler complains are missing.
 // Some are commented out because they rely on openssl/bn.h, which we can't find
 // when we try the import. *shrug*
-#include "ASNUtils.h"
 #include <FxA/ece.h>

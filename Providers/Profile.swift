@@ -15,11 +15,9 @@ import XCGLogger
 import SwiftKeychainWrapper
 import SyncTelemetry
 import AuthenticationServices
-
-// Import these dependencies ONLY for the main `Client` application target.
-#if MOZ_TARGET_CLIENT
-    import SwiftyJSON
-#endif
+import RustLog
+import FxAClient
+import Sentry
 
 private let log = Logger.syncLogger
 
@@ -63,16 +61,22 @@ class ProfileFileAccessor: FileAccessor {
         let profileDirName = "profile.\(localName)"
 
         // Bug 1147262: First option is for device, second is for simulator.
-        var rootPath: String
-        let sharedContainerIdentifier = AppInfo.sharedContainerIdentifier
-        if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: sharedContainerIdentifier) {
-            rootPath = url.path
-        } else {
-            log.error("Unable to find the shared container. Defaulting profile location to ~/Documents instead.")
-            rootPath = (NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
-        }
+//        var rootPath: String
+//        let sharedContainerIdentifier = AppInfo.sharedContainerIdentifier
+//        if let url = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: sharedContainerIdentifier) {
+//            rootPath = url.path
+//        } else {
+//            log.error("Unable to find the shared container. Defaulting profile location to ~/Documents instead.")
+//            rootPath = (NSSearchPathForDirectoriesInDomains(.documentDirectory, .userDomainMask, true)[0])
+//        }
 
-        super.init(rootPath: URL(fileURLWithPath: rootPath).appendingPathComponent(profileDirName).path)
+        let appSupportDir = try! FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+
+//        if FileManager.default.fileExists(atPath: URL(fileURLWithPath: rootPath).appendingPathComponent(profileDirName).path) {
+//            try? FileManager.default.copyItem(at: URL(fileURLWithPath: rootPath).appendingPathComponent(profileDirName), to: appSupportDir.appendingPathComponent(profileDirName))
+//        }
+
+        super.init(rootPath: appSupportDir.appendingPathComponent(profileDirName).path)
     }
 }
 
@@ -356,6 +360,11 @@ open class BrowserProfile: Profile {
             prefs.removeObjectForKey(PrefsKeys.KeyDefaultHomePageURL)
         }
 
+        // Remove the "__leanplum.sqlite" file in the documents directory.
+        if let leanplumFile = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false).appendingPathComponent("__leanplum.sqlite"), FileManager.default.fileExists(atPath: leanplumFile.path) {
+            try? FileManager.default.removeItem(at: leanplumFile)
+        }
+
         // Create the "Downloads" folder in the documents directory.
         if let downloadsPath = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false).appendingPathComponent("Downloads").path {
             try? FileManager.default.createDirectory(atPath: downloadsPath, withIntermediateDirectories: true, attributes: nil)
@@ -591,9 +600,11 @@ open class BrowserProfile: Profile {
         RustFirefoxAccounts.shared.disconnect()
 
         // Profile exists in extensions, UIApp is unavailable there, make this code run for the main app only
+        #if MOZ_TARGET_CLIENT
         if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {
             application.unregisterForRemoteNotifications()
         }
+        #endif
 
         // remove Account Metadata
         prefs.removeObjectForKey(PrefsKeys.KeyLastRemoteTabSyncTime)

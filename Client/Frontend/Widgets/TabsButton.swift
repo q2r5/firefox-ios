@@ -3,8 +3,8 @@
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
 import Foundation
-import SnapKit
 import Shared
+import UIKit
 
 struct TabsButtonUX {
     static let CornerRadius: CGFloat = 2
@@ -40,70 +40,62 @@ class TabsButton: UIButton {
         }
     }
 
-    lazy var countLabel: UILabel = {
-        let label = UILabel()
+    lazy var countLabel: UILabel = .build { label in
         label.font = TabsButtonUX.TitleFont
         label.layer.cornerRadius = TabsButtonUX.CornerRadius
         label.textAlignment = .center
         label.isUserInteractionEnabled = false
-        return label
-    }()
+    }
 
-    lazy var insideButton: UIView = {
-        let view = UIView()
+    lazy var insideButton: UIView = .build { view in
         view.clipsToBounds = false
         view.isUserInteractionEnabled = false
-        return view
-    }()
+    }
 
-    fileprivate lazy var labelBackground: UIView = {
-        let background = UIView()
+    fileprivate lazy var labelBackground: UIView = .build { background in
         background.layer.cornerRadius = TabsButtonUX.CornerRadius
         background.isUserInteractionEnabled = false
-        return background
-    }()
+    }
 
-    fileprivate lazy var borderView: UIImageView = {
-        let border = UIImageView(image: UIImage(named: "nav-tabcounter")?.withRenderingMode(.alwaysTemplate))
+    fileprivate lazy var borderView: UIImageView = .build { border in
+        border.image = UIImage(named: "nav-tabcounter")?.withRenderingMode(.alwaysTemplate)
         border.tintColor = UIColor.theme.browser.tint
-        return border
-    }()
+    }
 
     // Used to temporarily store the cloned button so we can respond to layout changes during animation
     fileprivate weak var clonedTabsButton: TabsButton?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
-        insideButton.addSubview(labelBackground)
-        insideButton.addSubview(borderView)
-        insideButton.addSubview(countLabel)
+        translatesAutoresizingMaskIntoConstraints = false
+        insideButton.addSubviews(labelBackground, borderView, countLabel)
         addSubview(insideButton)
-        isAccessibilityElement = true
-        accessibilityTraits.insert(.button)
-    }
 
-    override func updateConstraints() {
-        super.updateConstraints()
-        labelBackground.snp.remakeConstraints { (make) -> Void in
-            make.edges.equalTo(insideButton)
-        }
-        borderView.snp.remakeConstraints { (make) -> Void in
-            make.edges.equalTo(insideButton)
-        }
-        countLabel.snp.remakeConstraints { (make) -> Void in
-            make.edges.equalTo(insideButton)
-        }
-        insideButton.snp.remakeConstraints { (make) -> Void in
-            make.size.equalTo(24)
-            make.center.equalTo(self)
-        }
+        NSLayoutConstraint.activate([
+            labelBackground.leadingAnchor.constraint(equalTo: insideButton.leadingAnchor),
+            labelBackground.topAnchor.constraint(equalTo: insideButton.topAnchor),
+            labelBackground.trailingAnchor.constraint(equalTo: insideButton.trailingAnchor),
+            labelBackground.bottomAnchor.constraint(equalTo: insideButton.bottomAnchor),
+            borderView.leadingAnchor.constraint(equalTo: insideButton.leadingAnchor),
+            borderView.topAnchor.constraint(equalTo: insideButton.topAnchor),
+            borderView.trailingAnchor.constraint(equalTo: insideButton.trailingAnchor),
+            borderView.bottomAnchor.constraint(equalTo: insideButton.bottomAnchor),
+            countLabel.leadingAnchor.constraint(equalTo: insideButton.leadingAnchor),
+            countLabel.topAnchor.constraint(equalTo: insideButton.topAnchor),
+            countLabel.trailingAnchor.constraint(equalTo: insideButton.trailingAnchor),
+            countLabel.bottomAnchor.constraint(equalTo: insideButton.bottomAnchor),
+            insideButton.widthAnchor.constraint(equalToConstant: 24),
+            insideButton.heightAnchor.constraint(equalToConstant: 24),
+            insideButton.centerXAnchor.constraint(equalTo: centerXAnchor),
+            insideButton.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
     }
 
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
 
-    @objc override func clone() -> UIView {
+    @objc func clone() -> UIView {
         let button = TabsButton()
 
         button.accessibilityLabel = accessibilityLabel
@@ -151,16 +143,17 @@ class TabsButton: UIButton {
         let newTabsButton = clone() as! TabsButton
 
         self.clonedTabsButton = newTabsButton
+        newTabsButton.translatesAutoresizingMaskIntoConstraints = false
         newTabsButton.frame = self.bounds
         newTabsButton.addTarget(self, action: #selector(cloneDidClickTabs), for: .touchUpInside)
         newTabsButton.countLabel.text = countToBe
         newTabsButton.accessibilityValue = countToBe
         newTabsButton.insideButton.frame = self.insideButton.frame
-        newTabsButton.snp.removeConstraints()
         self.addSubview(newTabsButton)
-        newTabsButton.snp.makeConstraints { make  in
-            make.center.equalTo(self)
-        }
+        NSLayoutConstraint.activate([
+            newTabsButton.centerXAnchor.constraint(equalTo: centerXAnchor),
+            newTabsButton.centerYAnchor.constraint(equalTo: centerYAnchor)
+        ])
 
         // Instead of changing the anchorPoint of the CALayer, lets alter the rotation matrix math to be
         // a rotation around a non-origin point

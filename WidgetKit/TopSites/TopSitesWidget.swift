@@ -93,9 +93,10 @@ struct TopSitesView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background((Color(UIColor(red: 0.11, green: 0.11, blue: 0.13, alpha: 1.00))))
     }
+}
     
-    private func linkToContainingApp(_ urlSuffix: String = "", query: String) -> URL {
-        let urlString = "\(scheme)://\(query)\(urlSuffix)"
-        return URL(string: urlString)!
+struct TopSitesWidget_Previews: PreviewProvider {
+    static var previews: some View {
+        TopSitesView(entry: TopSitesEntry(date: Date(), favicons: [:], sites: []))
     }
 }

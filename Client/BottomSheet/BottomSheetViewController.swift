@@ -2,9 +2,7 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0
 
-import Foundation
 import UIKit
-import SnapKit
 import Shared
 
 enum BottomSheetState {
@@ -62,15 +60,11 @@ class BottomSheetViewController: UIViewController, NotificationThemeable {
     var containerViewController: UIViewController?
     
     // Views
-    private var overlay: UIView = {
-        let view = UIView()
+    private var overlay: UIView = .build { view in
         view.backgroundColor = UIColor.black.withAlphaComponent(0.50)
-        return view
-    }()
-    private var panView: UIView = {
-        let view = UIView()
-        return view
-    }()
+        view.translatesAutoresizingMaskIntoConstraints = false
+    }
+    private var panView: UIView = .build()
     
     // MARK: Initializers
     init() {
@@ -92,18 +86,21 @@ class BottomSheetViewController: UIViewController, NotificationThemeable {
     private func initialViewSetup() {
         self.view.backgroundColor = .clear
         self.view.addSubview(overlay)
-        overlay.snp.makeConstraints { make in
-            make.edges.equalToSuperview()
-            make.centerX.equalToSuperview()
-        }
-        
         self.view.addSubview(panView)
-        panView.snp.makeConstraints { make in
-            make.bottom.equalTo(self.view.safeArea.bottom)
-            make.centerX.equalToSuperview()
-            make.left.right.equalToSuperview()
-            make.height.equalTo(fullHeight)
-        }
+        
+        NSLayoutConstraint.activate([
+            overlay.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            overlay.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            overlay.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            overlay.topAnchor.constraint(equalTo: view.topAnchor),
+            overlay.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            overlay.widthAnchor.constraint(equalTo: view.widthAnchor),
+            panView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            panView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            panView.leftAnchor.constraint(equalTo: view.leftAnchor),
+            panView.rightAnchor.constraint(equalTo: view.rightAnchor),
+            panView.heightAnchor.constraint(equalToConstant: fullHeight)
+        ])
         
         let gesture = UIPanGestureRecognizer.init(target: self, action: #selector(panGesture))
         panView.addGestureRecognizer(gesture)

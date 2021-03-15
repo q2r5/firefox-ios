@@ -6,7 +6,7 @@
 /// Eventually, this file may be auto-generated.
 
 import Foundation
-import MozillaAppServices
+import Nimbus
 
 // This struct is populated from JSON coming from nimbus, with for `homescreen`
 // feature id. The default values (i.e. user isn't enrolled in an experiment, or
@@ -28,6 +28,7 @@ struct Homescreen {
         case topSites
         case jumpBackIn
         case recentlySaved
+        case recentlyVisited
         case pocket
         case libraryShortcuts
 
@@ -39,6 +40,7 @@ struct Homescreen {
             case .topSites: return true
             case .jumpBackIn: return false
             case .recentlySaved: return false
+            case .recentlyVisited: return false
             case .pocket: return true
             case .libraryShortcuts: return true
             }

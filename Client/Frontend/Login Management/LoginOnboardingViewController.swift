@@ -30,11 +30,22 @@ class LoginOnboardingViewController: SettingsViewController {
     private var continueButton: UIButton = {
         let button = UIButton(type: .custom)
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.backgroundColor = UIColor.Photon.Blue50
-        button.layer.cornerRadius = 8
-        button.setTitle(.LoginsOnboardingContinueButtonTitle, for: .normal)
+        if #available(iOS 15, *) {
+            var buttonConfig = UIButton.Configuration.plain()
+            var backgroundConfig = UIBackgroundConfiguration.clear()
+            backgroundConfig.backgroundColor = UIColor.Photon.Blue50
+            backgroundConfig.cornerRadius = 8
+            buttonConfig.background = backgroundConfig
+            buttonConfig.title = .LoginsOnboardingContinueButtonTitle
+            buttonConfig.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 15, bottom: 0, trailing: 0)
+            button.configuration = buttonConfig
+        } else {
+            button.backgroundColor = UIColor.Photon.Blue50
+            button.layer.cornerRadius = 8
+            button.setTitle(.LoginsOnboardingContinueButtonTitle, for: .normal)
+            button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 15, bottom: 0, right: 0)
+        }
         button.titleLabel?.font = DynamicFontHelper().MediumSizeBoldFontAS
-        button.titleEdgeInsets = UIEdgeInsets(top: 0, left: 15, bottom: 0, right: 0)
         button.addTarget(self, action: #selector(proceedButtonTapped), for: .touchUpInside)
         return button
     }()

@@ -4,14 +4,11 @@
 
 import Foundation
 import Shared
-import SnapKit
 
 class NewTabButton: UIButton {
-    lazy var plusImage: UIImageView = {
-        let plusImage = UIImageView()
+    let plusImage: UIImageView = .build { plusImage in
         plusImage.image = UIImage.templateImageNamed("menu-NewTab")
-        return plusImage
-    }()
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -32,9 +29,9 @@ class NewTabButton: UIButton {
     private func viewSetup() {
         addSubview(plusImage)
 
-        plusImage.snp.makeConstraints { make in
-            make.right.equalToSuperview()
-            make.centerY.equalTo(self.snp.centerY)
-        }
+        NSLayoutConstraint.activate([
+            plusImage.rightAnchor.constraint(equalTo: self.rightAnchor),
+            plusImage.centerYAnchor.constraint(equalTo: self.centerYAnchor)
+        ])
     }
 }

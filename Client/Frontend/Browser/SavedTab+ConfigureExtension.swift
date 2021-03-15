@@ -57,6 +57,7 @@ extension SavedTab {
         tab.tabUUID = UUID ?? ""
         tab.tabGroupData = tabGroupData ?? tab.tabGroupData
         tab.screenshotUUID = screenshotUUID
+        tab.tabGroupData = tabGroupData ?? tab.tabGroupData
         tab.firstCreatedTime = createdAt ?? sessionData?.lastUsedTime ?? Date.now()
         return tab
     }

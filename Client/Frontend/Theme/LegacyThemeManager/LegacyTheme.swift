@@ -152,6 +152,7 @@ class TextFieldColor {
     var background: UIColor { return UIColor.Photon.LightGrey20 }
     var backgroundInOverlay: UIColor { return UIColor.Photon.LightGrey20 }
     var textAndTint: UIColor { return defaultTextAndTint }
+    var domainTint: UIColor { return UIColor.Photon.LightGrey80 }
     var separator: UIColor { return .white }
 }
 
@@ -184,6 +185,12 @@ class HomePanelColor {
     var shortcutShadowOpacity: Float { return 0.2 }
     
     var recentlySavedBookmarkCellBackground: UIColor { return .white}
+
+    var jumpbackInGroupIconColour: UIColor { return UIColor.Photon.DarkGrey90}
+
+
+    var recentlyVisitedCellGroupImage: UIColor { return UIColor.Photon.DarkGrey90 }
+    var recentlyVisitedCellBottomLine: UIColor { return UIColor.Photon.LightGrey40 }
 
     var activityStreamHeaderText: UIColor { return UIColor.Photon.DarkGrey90 }
     var activityStreamHeaderButton: UIColor { return UIColor.Photon.Blue50 }
