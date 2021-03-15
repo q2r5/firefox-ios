@@ -11,7 +11,7 @@ let TokenServerClientUnknownError = TokenServerError.local(
     NSError(domain: TokenServerClientErrorDomain, code: 999,
     userInfo: [NSLocalizedDescriptionKey: "Invalid server response"]))
 
-public struct TokenServerToken {
+public struct TokenServerToken: Codable {
     public let id: String
     public let key: String
     public let api_endpoint: String
@@ -20,6 +20,16 @@ public struct TokenServerToken {
     public let durationInSeconds: UInt64
     // A healthy token server reports its timestamp.
     public let remoteTimestamp: Timestamp
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case key
+        case api_endpoint
+        case uid
+        case hashedFxAUID = "hashed_fxa_uid"
+        case durationInSeconds = "duration"
+        case remoteTimestamp
+    }
 
     /**
      * Return true if this token points to the same place as the other token.
@@ -104,29 +114,22 @@ open class TokenServerClient {
         }
     }
 
-    fileprivate class func remoteError(fromJSON json: JSON, statusCode: Int, remoteTimestampHeader: String?) -> TokenServerError? {
-        if json.error != nil {
-            return nil
-        }
+    fileprivate class func remoteError(fromJSON json: [String: Any], statusCode: Int, remoteTimestampHeader: String?) -> TokenServerError? {
         if 200 <= statusCode && statusCode <= 299 {
             return nil
         }
-        return TokenServerError.remote(code: Int32(statusCode), status: json["status"].string,
-            remoteTimestamp: parseTimestampHeader(remoteTimestampHeader))
+        return TokenServerError.remote(code: Int32(statusCode), status: json["status"] as? String, remoteTimestamp: parseTimestampHeader(remoteTimestampHeader))
     }
 
-    fileprivate class func token(fromJSON json: JSON, remoteTimestampHeader: String?) -> TokenServerToken? {
-        if json.error != nil {
-            return nil
-        }
+    fileprivate class func token(fromJSON json: [String: Any], remoteTimestampHeader: String?) -> TokenServerToken? {
         if let
             remoteTimestamp = parseTimestampHeader(remoteTimestampHeader), // A token server that is not providing its timestamp is not healthy.
-            let id = json["id"].string,
-            let key = json["key"].string,
-            let api_endpoint = json["api_endpoint"].string,
-            let uid = json["uid"].int,
-            let hashedFxAUID = json["hashed_fxa_uid"].string,
-            let durationInSeconds = json["duration"].int64, durationInSeconds > 0 {
+            let id = json["id"] as? String,
+            let key = json["key"] as? String,
+            let api_endpoint = json["api_endpoint"] as? String,
+            let uid = json["uid"] as? Int,
+            let hashedFxAUID = json["hashed_fxa_uid"] as? String,
+            let durationInSeconds = json["duration"] as? Int64, durationInSeconds > 0 {
             return TokenServerToken(id: id, key: key, api_endpoint: api_endpoint, uid: UInt64(uid),
                                     hashedFxAUID: hashedFxAUID, durationInSeconds: UInt64(durationInSeconds),
                                     remoteTimestamp: remoteTimestamp)
@@ -159,7 +162,10 @@ open class TokenServerClient {
                 return
             }
 
-            let json = JSON(data)
+            guard let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String : Any] else {
+                return
+            }
+
             let remoteTimestampHeader = (response.allHeaderFields as NSDictionary)["x-timestamp"] as? String
             if let remoteError = TokenServerClient.remoteError(fromJSON: json, statusCode: response.statusCode, remoteTimestampHeader: remoteTimestampHeader) {
                 deferred.fill(Maybe(failure: remoteError))

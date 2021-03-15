@@ -65,7 +65,7 @@ private let CurrentSyncAuthStateCacheVersion = 1
 
 private let log = Logger.syncLogger
 
-public struct SyncAuthStateCache {
+public struct SyncAuthStateCache: Codable {
     let token: TokenServerToken
     let forKey: Data
     let expiresAt: Timestamp

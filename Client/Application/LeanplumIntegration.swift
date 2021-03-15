@@ -149,8 +149,8 @@ class LeanPlumClient {
     // This defines an external Leanplum varible to enable/disable FxA prepush dialogs.
     // The primary result is having a feature flag controlled by Leanplum, and falling back
     // to prompting with native push permissions.
-    private var useFxAPrePush = LPVar.define("useFxAPrePush", with: false)
-    var enablePocketVideo = LPVar.define("pocketVideo", with: false)
+    private var useFxAPrePush = Var(name: "useFxAPrePush", boolean: false)
+    var enablePocketVideo = Var(name: "pocketVideo", boolean: false)
     private func isPrivateMode() -> Bool {
         // Need to be run on main thread since isInPrivateMode requires to be on the main thread.
         assert(Thread.isMainThread)
@@ -201,18 +201,18 @@ class LeanPlumClient {
 
         if UIDevice.current.name.contains("MozMMADev") {
             log.info("LeanplumIntegration - Setting up for Development")
-            Leanplum.setDeviceId(UIDevice.current.identifierForVendor?.uuidString)
-            Leanplum.setAppId(settings.appId, withDevelopmentKey: settings.developmentKey)
+            //Leanplum.setDeviceId(UIDevice.current.identifierForVendor!.uuidString) Unneeded? Default is identifier for vendor.
+            Leanplum.setAppId(settings.appId, developmentKey: settings.developmentKey)
             setupType = .debug
         } else {
             log.info("LeanplumIntegration - Setting up for Production")
-            Leanplum.setAppId(settings.appId, withProductionKey: settings.productionKey)
+            Leanplum.setAppId(settings.appId, productionKey: settings.productionKey)
             setupType = .production
         }
 
         Leanplum.syncResourcesAsync(true)
 
-        let attributes: [AnyHashable: Any] = [
+        let attributes: [String: Any] = [
             LPAttributeKey.mailtoIsDefault: mailtoIsDefault(),
             LPAttributeKey.focusInstalled: focusInstalled(),
             LPAttributeKey.klarInstalled: klarInstalled(),
@@ -225,7 +225,7 @@ class LeanPlumClient {
         self.setupCustomTemplates()
 
         lpState = .willStart
-        Leanplum.start(withUserId: nil, userAttributes: attributes, responseHandler: { _ in
+        Leanplum.start(userId: nil, attributes: attributes) { _ in
             self.track(event: .openedApp)
 
             assert(Thread.isMainThread)
@@ -238,7 +238,7 @@ class LeanPlumClient {
             self.checkIfAppWasInstalled(key: PrefsKeys.HasPocketInstalled, isAppInstalled: self.pocketInstalled(), lpEvent: .downloadedPocket)
             self.recordSyncedClients(with: self.profile)
             self.recordPushTests()
-        })
+        }
 
         NotificationCenter.default.addObserver(forName: .FirefoxAccountChanged, object: nil, queue: .main) { _ in
             if !RustFirefoxAccounts.shared.hasAccount() {
@@ -250,10 +250,7 @@ class LeanPlumClient {
     // Send data to telemetry for a/b tests that send messages
     func recordPushTests() {
         var lpData: Dictionary<String, Any>?
-        guard let variants = Leanplum.variants() as? [Dictionary<String, Any>] else {
-            return
-        }
-        variants.forEach {
+        Leanplum.variants().forEach {
             if abTestMessageNames.contains($0["abTestName"] as? String ?? "") {
                 lpData = $0
             }
@@ -284,7 +281,7 @@ class LeanPlumClient {
                 return
             }
             if let params = parameters {
-                Leanplum.track(event.rawValue, withParameters: params)
+                Leanplum.track(event.rawValue, params: params)
             } else {
                 Leanplum.track(event.rawValue)
             }
@@ -310,7 +307,7 @@ class LeanPlumClient {
     }
 
     func isFxAPrePushEnabled() -> Bool {
-        return AppConstants.MOZ_FXA_LEANPLUM_AB_PUSH_TEST && (useFxAPrePush?.boolValue() ?? false)
+        return AppConstants.MOZ_FXA_LEANPLUM_AB_PUSH_TEST && (useFxAPrePush.boolValue())
     }
     
     func isRunning() -> Bool {
@@ -368,15 +365,15 @@ class LeanPlumClient {
     private func setupCustomTemplates() {
         // These properties are exposed through the Leanplum web interface.
         // Ref: https://github.com/Leanplum/Leanplum-iOS-Samples/blob/master/iOS_customMessageTemplates/iOS_customMessageTemplates/LPMessageTemplates.m
-        let args: [LPActionArg] = [
-            LPActionArg(named: LPMessage.ArgTitleText, with: LPMessage.DefaultAskToAskTitle),
-            LPActionArg(named: LPMessage.ArgTitleColor, with: UIColor.black),
-            LPActionArg(named: LPMessage.ArgMessageText, with: LPMessage.DefaultAskToAskMessage),
-            LPActionArg(named: LPMessage.ArgMessageColor, with: UIColor.black),
-            LPActionArg(named: LPMessage.ArgAcceptButtonText, with: LPMessage.DefaultOkButtonText),
-            LPActionArg(named: LPMessage.ArgCancelAction, withAction: nil),
-            LPActionArg(named: LPMessage.ArgCancelButtonText, with: LPMessage.DefaultLaterButtonText),
-            LPActionArg(named: LPMessage.ArgCancelButtonTextColor, with: UIColor.Photon.Grey50)
+        let args: [ActionArg] = [
+            ActionArg(name: LPMessage.ArgTitleText, string: LPMessage.DefaultAskToAskTitle),
+            ActionArg(name: LPMessage.ArgTitleColor, color: UIColor.black),
+            ActionArg(name: LPMessage.ArgMessageText, string: LPMessage.DefaultAskToAskMessage),
+            ActionArg(name: LPMessage.ArgMessageColor, color: UIColor.black),
+            ActionArg(name: LPMessage.ArgAcceptButtonText, string: LPMessage.DefaultOkButtonText),
+            ActionArg(name: LPMessage.ArgCancelAction, action: nil),
+            ActionArg(name: LPMessage.ArgCancelButtonText, string: LPMessage.DefaultLaterButtonText),
+            ActionArg(name: LPMessage.ArgCancelButtonTextColor, color: UIColor.Photon.Grey50)
         ]
 
         let responder: LeanplumActionBlock = { (context) -> Bool in
@@ -412,13 +409,13 @@ class LeanPlumClient {
         }
 
         // Register or update the custom Leanplum message
-        Leanplum.defineAction(LPMessage.FxAPrePush, of: kLeanplumActionKindMessage, withArguments: args, withOptions: [:], withResponder: responder)
+        Leanplum.defineAction(name: LPMessage.FxAPrePush, kind: .message, args: args, options: [:], completion: responder)
     }
 }
 
 extension UIApplication {
     // Extension to get the current top most view controller
-    class func topViewController(base: UIViewController? = UIApplication.shared.keyWindow?.rootViewController) -> UIViewController? {
+    class func topViewController(base: UIViewController? = UIApplication.shared.windows.filter({$0.isKeyWindow}).first?.rootViewController) -> UIViewController? {
         if let nav = base as? UINavigationController {
             return topViewController(base: nav.visibleViewController)
         }

@@ -103,12 +103,9 @@ open class ImageOperation: NSObject, SDWebImageOperation {
 
 extension UIImage {
     func overlayWith(image: UILabel) -> UIImage {
-        UIGraphicsBeginImageContextWithOptions(CGSize(width: size.width, height: size.height), false, 0.0)
-        draw(in: CGRect(origin: CGPoint.zero, size: size))
-        image.draw(CGRect(origin: CGPoint.zero, size: image.frame.size))
-        let newImage = UIGraphicsGetImageFromCurrentImageContext()!
-        UIGraphicsEndImageContext()
-        
-        return newImage
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            draw(in: CGRect(origin: .zero, size: size))
+            image.draw(CGRect(origin: .zero, size: image.frame.size))
+        }
     }
 }

@@ -23,7 +23,7 @@ class BottomSheetViewController: UIViewController, Themeable {
     var delegate: BottomSheetDelegate?
     private var currentState: BottomSheetState = .none
     private var isLandscape: Bool {
-        return UIApplication.shared.statusBarOrientation.isLandscape
+        return (UIApplication.shared.delegate as? AppDelegate)?.window?.windowScene?.interfaceOrientation.isLandscape ?? false
     }
     private var orientationBasedHeight: CGFloat {
         return isLandscape ? DeviceInfo.screenSizeOrientationIndependent().width : DeviceInfo.screenSizeOrientationIndependent().height
@@ -231,7 +231,7 @@ class BottomSheetViewController: UIViewController, Themeable {
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) {
         super.viewWillTransition(to: size, with: coordinator)
         coordinator.animate(alongsideTransition: { (UIViewControllerTransitionCoordinatorContext) -> Void in
-            let orient = UIApplication.shared.statusBarOrientation
+            let orient = (UIApplication.shared.delegate as? AppDelegate)?.window?.windowScene?.interfaceOrientation
             switch orient {
             case .portrait:
                 self.moveView(state: .partial)

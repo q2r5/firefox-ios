@@ -5,6 +5,8 @@
 import Foundation
 import Shared
 import OnePasswordExtension
+import ShareTo
+import Storage
 
 private let log = Logger.browserLogger
 
@@ -16,6 +18,8 @@ class ShareExtensionHelper: NSObject {
     fileprivate let browserFillIdentifier = "org.appextension.fill-browser-action"
 
     fileprivate func isFile(url: URL) -> Bool { url.scheme == "file" }
+    fileprivate let profile = BrowserProfile(localName: "profile")
+    var devicesActions = [DevicesShareSheet]()
 
     // Can be a file:// or http(s):// url
     init(url: URL, tab: Tab?) {
@@ -40,7 +44,16 @@ class ShareExtensionHelper: NSObject {
         }
         activityItems.append(self)
 
-        let activityViewController = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        if let devices = self.profile.remoteClientsAndTabs.getRemoteDevices().value.successValue {
+            for device in devices {
+                let deviceShareItem = DevicesShareSheet(title: device.name, image: UIImage(named: "faviconFox")) { sharedItems in
+                    _ = self.profile.sendItem(ShareItem(url: self.url.absoluteString, title: nil, favicon: nil), toDevices: [device])
+                }
+                devicesActions.append(deviceShareItem)
+            }
+        }
+
+        let activityViewController = UIActivityViewController(activityItems: activityItems, applicationActivities: devicesActions)
 
         // Hide 'Add to Reading List' which currently uses Safari.
         // We would also hide View Later, if possible, but the exclusion list doesn't currently support
@@ -131,7 +144,7 @@ private extension ShareExtensionHelper {
         }
 
         // Add 1Password to share sheet
-        OnePasswordExtension.shared().createExtensionItem(forWebView: selectedWebView, completion: {(extensionItem, error) -> Void in
+        OnePasswordExtension.shared().createExtensionItem(for: selectedWebView, completion: {(extensionItem, error) -> Void in
             if extensionItem == nil {
                 log.error("Failed to create the password manager extension item: \(error.debugDescription).")
                 return
@@ -147,7 +160,7 @@ private extension ShareExtensionHelper {
             return
         }
 
-        OnePasswordExtension.shared().fillReturnedItems(returnedItems, intoWebView: selectedWebView, completion: { (success, returnedItemsError) -> Void in
+        OnePasswordExtension.shared().fillReturnedItems(returnedItems, into: selectedWebView, completion: { (success, returnedItemsError) -> Void in
             if !success {
                 log.error("Failed to fill item into webview: \(returnedItemsError ??? "nil").")
             }

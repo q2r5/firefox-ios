@@ -45,8 +45,18 @@ class NotificationService: UNNotificationServiceExtension {
         let handler = FxAPushMessageHandler(with: profile)
 
         handler.handle(userInfo: userInfo).upon { res in
-            self.didFinish(res.successValue, with: res.failureValue as? PushMessageError)
+            self.didFinish(res)
         }
+    }
+    
+    func didFinish(_ result: Result<PushMessage, PushMessageError>) {
+        guard case .success(let message) = result else {
+            if case .failure(let err) = result {
+                didFinish(nil, with: err)
+            }
+            return
+        }
+        didFinish(message, with: nil)
     }
 
     func didFinish(_ what: PushMessage? = nil, with error: PushMessageError? = nil) {
@@ -142,19 +152,18 @@ extension SyncDataDisplay {
         Sentry.shared.send(message: "SentTab error: account not verified")
         #if MOZ_CHANNEL_BETA || DEBUG
             presentNotification(title: Strings.SentTab_NoTabArrivingNotification_title, body: "DEBUG: Account Verified")
-            return
+        #else
+            presentNotification(title: Strings.SentTab_NoTabArrivingNotification_title, body: Strings.SentTab_NoTabArrivingNotification_body)
         #endif
-        presentNotification(title: Strings.SentTab_NoTabArrivingNotification_title, body: Strings.SentTab_NoTabArrivingNotification_body)
     }
 
     func displayUnknownMessageNotification(debugInfo: String) {
         Sentry.shared.send(message: "SentTab error: \(debugInfo)")
         #if MOZ_CHANNEL_BETA || DEBUG
             presentNotification(title: Strings.SentTab_NoTabArrivingNotification_title, body: "DEBUG: " + debugInfo)
-            return
+        #else
+            presentNotification(title: Strings.SentTab_NoTabArrivingNotification_title, body: Strings.SentTab_NoTabArrivingNotification_body)
         #endif
-
-        presentNotification(title: Strings.SentTab_NoTabArrivingNotification_title, body: Strings.SentTab_NoTabArrivingNotification_body)
     }
 }
 

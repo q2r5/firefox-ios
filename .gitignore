@@ -51,6 +51,8 @@ DerivedData
 # content blocking lists
 content-blocker-lib-ios/Lists/*
 
+.swiftpm/
+
 #python environment
 python-env/
 

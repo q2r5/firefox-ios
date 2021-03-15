@@ -19,7 +19,7 @@ public extension IdentifierString {
 
 // Telemetry Events
 // Documentation: http://gecko.readthedocs.io/en/latest/toolkit/components/telemetry/telemetry/collection/events.html#events
-public struct Event {
+public struct Event: Codable {
     let timestamp: Timestamp
     let category: IdentifierString
     let method: IdentifierString

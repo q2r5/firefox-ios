@@ -126,19 +126,11 @@ open class RustFirefoxAccounts {
         }
 
         let config: FxAConfig
-        let useCustom = prefs?.boolForKey(PrefsKeys.KeyUseCustomFxAContentServer) ?? false || prefs?.boolForKey(PrefsKeys.KeyUseCustomSyncTokenServerOverride) ?? false
-        if useCustom {
-            let contentUrl: String
-            if prefs?.boolForKey(PrefsKeys.KeyUseCustomFxAContentServer) ?? false, let url = prefs?.stringForKey(PrefsKeys.KeyCustomFxAContentServer) {
-                contentUrl = url
-            } else {
-                contentUrl = "https://stable.dev.lcip.org"
-            }
-
-            let tokenServer = prefs?.boolForKey(PrefsKeys.KeyUseCustomSyncTokenServerOverride) ?? false ? prefs?.stringForKey(PrefsKeys.KeyCustomSyncTokenServerOverride) : nil
+        let tokenServer = prefs?.boolForKey(PrefsKeys.KeyUseCustomSyncTokenServerOverride) ?? false ? prefs?.stringForKey(PrefsKeys.KeyCustomSyncTokenServerOverride) : nil
+        if prefs?.boolForKey(PrefsKeys.KeyUseCustomFxAContentServer) ?? false, let contentUrl = prefs?.stringForKey(PrefsKeys.KeyCustomFxAContentServer) {
             config = FxAConfig(contentUrl: contentUrl, clientId: RustFirefoxAccounts.clientID, redirectUri: RustFirefoxAccounts.redirectURL, tokenServerUrlOverride: tokenServer)
         } else {
-            config = FxAConfig(server: server, clientId: RustFirefoxAccounts.clientID, redirectUri: RustFirefoxAccounts.redirectURL)
+            config = FxAConfig(server: server, clientId: RustFirefoxAccounts.clientID, redirectUri: RustFirefoxAccounts.redirectURL, tokenServerUrlOverride: tokenServer)
         }
 
         let type = UIDevice.current.userInterfaceIdiom == .pad ? DeviceType.tablet : DeviceType.mobile
@@ -231,7 +223,7 @@ open class RustFirefoxAccounts {
     /// Rust FxA notification handlers can call this to update caches and the UI.
     private func update() {
         guard let accountManager = accountManager.peek() else { return }
-        let avatarUrl = accountManager.accountProfile()?.avatar?.url
+        let avatarUrl = accountManager.accountProfile()?.avatar
         if let str = avatarUrl, let url = URL(string: str) {
             avatar = Avatar(url: url)
         }
@@ -313,7 +305,7 @@ public struct FxAUserProfile: Codable, Equatable {
     init(profile: MozillaAppServices.Profile) {
         uid = profile.uid
         email = profile.email
-        avatarUrl = profile.avatar?.url
+        avatarUrl = profile.avatar
         displayName = profile.displayName
     }
 }

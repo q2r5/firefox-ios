@@ -18,7 +18,7 @@ private struct RemoteTabsPanelUX {
     static let EmptyStateInstructionsWidth = 170
     static let EmptyStateTopPaddingInBetweenItems: CGFloat = 15 // UX TODO I set this to 8 so that it all fits on landscape
     static let EmptyStateSignInButtonColor = UIColor.Photon.Blue40
-    static let EmptyStateSignInButtonCornerRadius: CGFloat = 4
+    static let EmptyStateSignInButtonCornerRadius: CGFloat = 8
     static let EmptyStateSignInButtonHeight = 44
     static let EmptyStateSignInButtonWidth = 200
     static let HistoryTableViewHeaderChevronInset: CGFloat = 10
@@ -60,6 +60,14 @@ class RemoteTabsPanel: SiteTableViewController, LibraryPanel {
         }
 
         tableViewController.didMove(toParent: self)
+
+        parent?.navigationItem.title = Strings.AppMenuSyncedTabsTitleString
+        parent?.navigationController?.isToolbarHidden = true
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        parent?.navigationItem.setRightBarButton(nil, animated: animated)
+        parent?.navigationController?.setToolbarHidden(true, animated: animated)
     }
     
     override func applyTheme() {
@@ -338,7 +346,6 @@ class RemoteTabsNotLoggedInCell: UITableViewCell {
         selectionStyle = .none
 
         self.libraryPanel = libraryPanel
-        let createAnAccountButton = UIButton(type: .system)
 
         emptyStateImageView.image = UIImage.templateImageNamed(emptySyncImageName)
         contentView.addSubview(emptyStateImageView)
@@ -356,16 +363,11 @@ class RemoteTabsNotLoggedInCell: UITableViewCell {
 
         signInButton.setTitle(Strings.FxASignInToSync, for: [])
         signInButton.setTitleColor(UIColor.Photon.White100, for: [])
-        signInButton.titleLabel?.font = UIFont.preferredFont(forTextStyle: .subheadline)
+        signInButton.titleLabel?.font = UIFont.preferredFont(forTextStyle: .headline)
         signInButton.layer.cornerRadius = RemoteTabsPanelUX.EmptyStateSignInButtonCornerRadius
         signInButton.clipsToBounds = true
         signInButton.addTarget(self, action: #selector(signIn), for: .touchUpInside)
         contentView.addSubview(signInButton)
-
-        createAnAccountButton.setTitle(.RemoteTabCreateAccount, for: [])
-        createAnAccountButton.titleLabel?.font = UIFont.preferredFont(forTextStyle: .caption1)
-        createAnAccountButton.addTarget(self, action: #selector(createAnAccount), for: .touchUpInside)
-        contentView.addSubview(createAnAccountButton)
 
         emptyStateImageView.snp.makeConstraints { (make) -> Void in
             make.centerX.equalTo(instructionsLabel)
@@ -380,11 +382,6 @@ class RemoteTabsNotLoggedInCell: UITableViewCell {
         titleLabel.snp.makeConstraints { make in
             make.top.equalTo(emptyStateImageView.snp.bottom).offset(RemoteTabsPanelUX.EmptyStateTopPaddingInBetweenItems)
             make.centerX.equalTo(emptyStateImageView)
-        }
-
-        createAnAccountButton.snp.makeConstraints { (make) -> Void in
-            make.centerX.equalTo(signInButton)
-            make.top.equalTo(signInButton.snp.bottom).offset(RemoteTabsPanelUX.EmptyStateTopPaddingInBetweenItems)
         }
 
         applyTheme()
@@ -408,14 +405,8 @@ class RemoteTabsNotLoggedInCell: UITableViewCell {
         }
     }
 
-    @objc fileprivate func createAnAccount() {
-        if let libraryPanel = self.libraryPanel {
-            libraryPanel.libraryPanelDelegate?.libraryPanelDidRequestToCreateAccount()
-        }
-    }
-
     override func updateConstraints() {
-        if UIApplication.shared.statusBarOrientation.isLandscape && !(DeviceInfo.deviceModel().range(of: "iPad") != nil) {
+        if ((UIApplication.shared.delegate as? AppDelegate)?.window?.windowScene?.interfaceOrientation.isLandscape ?? false) && !(DeviceInfo.deviceModel().range(of: "iPad") != nil) {
             instructionsLabel.snp.remakeConstraints { make in
                 make.top.equalTo(titleLabel.snp.bottom).offset(RemoteTabsPanelUX.EmptyStateTopPaddingInBetweenItems)
                 make.width.equalTo(RemoteTabsPanelUX.EmptyStateInstructionsWidth)

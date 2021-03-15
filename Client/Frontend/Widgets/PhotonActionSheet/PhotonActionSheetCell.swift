@@ -258,9 +258,9 @@ class PhotonActionSheetCell: UITableViewCell {
         case .Disclosure:
             stackView.addArrangedSubview(disclosureIndicator)
         case .Switch:
-            toggleSwitch.setOn(action.isEnabled)
-            stackView.addArrangedSubview(toggleSwitch.mainView)
+            accessoryType = action.isEnabled ? .checkmark : .none
         case .Sync:
+            accessoryType = .none
             if let manager = syncManager {
                 let padding = PhotonActionSheetCell.Padding
                 if syncButton == nil {

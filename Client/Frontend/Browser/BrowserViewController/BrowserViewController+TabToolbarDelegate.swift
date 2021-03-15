@@ -3,6 +3,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import Shared
+import Account
 
 extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
     func tabToolbarDidPressBack(_ tabToolbar: TabToolbarProtocol, button: UIButton) {
@@ -17,6 +18,42 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
 
     func tabToolbarDidPressReload(_ tabToolbar: TabToolbarProtocol, button: UIButton) {
         tabManager.selectedTab?.reload()
+    }
+
+    func tabToolbarReloadContextMenu(_ suggested: [UIMenuElement]?) -> UIMenu? {
+        guard let tab = tabManager.selectedTab,
+              tab.webView?.url != nil,
+              (tab.getContentScript(name: ReaderMode.name()) as? ReaderMode)?.state != .active else {
+            return nil
+        }
+
+        let defaultUAisDesktop = UserAgent.isDesktop(ua: UserAgent.getUserAgent())
+        let toggleActionTitle: String
+        if defaultUAisDesktop {
+            toggleActionTitle = tab.changedUserAgent ? Strings.AppMenuViewDesktopSiteTitleString : Strings.AppMenuViewMobileSiteTitleString
+        } else {
+            toggleActionTitle = tab.changedUserAgent ? Strings.AppMenuViewMobileSiteTitleString : Strings.AppMenuViewDesktopSiteTitleString
+        }
+        let toggleDesktopSite = UIAction(title: toggleActionTitle) { _ in
+            if let url = tab.url {
+                tab.toggleChangeUserAgent()
+                Tab.ChangeUserAgent.updateDomainList(forUrl: url, isChangedUA: tab.changedUserAgent, isPrivate: tab.isPrivate)
+            }
+        }
+
+        if let url = tab.webView?.url, let helper = tab.contentBlocker, helper.isEnabled, helper.blockingStrengthPref == .strict {
+            let isSafelisted = helper.status == .safelisted
+
+            let title = !isSafelisted ? Strings.TrackingProtectionReloadWithout : Strings.TrackingProtectionReloadWith
+            let toggleTP = UIAction(title: title) { _ in
+                ContentBlocker.shared.safelist(enable: !isSafelisted, url: url) {
+                    tab.reload()
+                }
+            }
+            return UIMenu(children: [toggleDesktopSite, toggleTP])
+        } else {
+            return UIMenu(children: [toggleDesktopSite])
+        }
     }
 
     func tabToolbarDidLongPressReload(_ tabToolbar: TabToolbarProtocol, button: UIButton) {
@@ -48,8 +85,8 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
     }
 
     func tabToolbarDidPressLibrary(_ tabToolbar: TabToolbarProtocol, button: UIButton) {
-        if let libraryDrawerViewController = self.libraryDrawerViewController, libraryDrawerViewController.isOpen {
-            libraryDrawerViewController.close()
+        if let libraryViewController = self.libraryViewController, libraryViewController.isViewLoaded {
+            libraryViewController.dismiss(animated: true)
         } else {
             showLibrary()
         }
@@ -59,6 +96,122 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
         let isPrivate = tabManager.selectedTab?.isPrivate ?? false
         tabManager.selectTab(tabManager.addTab(nil, isPrivate: isPrivate))
         focusLocationTextField(forTab: tabManager.selectedTab)
+    }
+
+    func getAppMenu() -> UIMenu {
+        var actions = [UIMenuElement]()
+        let whatsNewAction = UIAction(title: Strings.WhatsNewString) { _ in
+            if let whatsNewTopic = AppInfo.whatsNewTopic, let whatsNewURL = SupportUtils.URLForTopic(whatsNewTopic) {
+                TelemetryWrapper.recordEvent(category: .action, method: .open, object: .whatsNew)
+                self.openURLInNewTab(whatsNewURL)
+            }
+        }
+
+        let userProfile = RustFirefoxAccounts.shared.userProfile
+        var syncActions = [UIMenuElement]()
+        if let userProfile = userProfile {
+            let showFxA = UIAction(title: userProfile.displayName ?? userProfile.email) { _ in
+                self.presentSignInViewController(FxALaunchParams(query: ["entrypoint" : "browsermenu"]), flowType: .emailLoginFlow, referringPage: .appMenu)
+            }
+            let syncNow = UIAction(title: Strings.FxASyncNow) { _ in
+                self.profile.syncManager.syncEverything(why: .syncNow)
+            }
+            syncActions.append(syncNow)
+            syncActions.append(showFxA)
+        } else {
+            let signInAction = UIAction(title: Strings.FxASignInToSync) { _ in
+                self.presentSignInViewController(FxALaunchParams(query: ["entrypoint" : "browsermenu"]), flowType: .emailLoginFlow, referringPage: .appMenu)
+            }
+            syncActions.append(signInAction)
+        }
+        actions.append(UIMenu(options: .displayInline, children: syncActions))
+
+        let isLoginsButtonShowing = LoginListViewController.shouldShowAppMenuShortcut(forPrefs: profile.prefs)
+        let viewLogins: UIAction? = !isLoginsButtonShowing ? nil :
+            UIAction(title: Strings.LoginsAndPasswordsTitle) { _ in
+                guard let navController = self.navigationController else { return }
+                let navigationHandler: ((_ url: URL?) -> Void) = { url in
+                    BrowserViewController.foregroundBVC().dismiss(animated: true, completion: nil)
+                    self.openURLInNewTab(url)
+                }
+
+                LoginListViewController.create(authenticateInNavigationController: navController, profile: self.profile, settingsDelegate: self, webpageNavigationHandler: navigationHandler).uponQueue(.main) { loginsVC in
+                    guard let loginsVC = loginsVC else { return }
+                    loginsVC.shownFromAppMenu = true
+                    let navController = ThemedNavigationController(rootViewController: loginsVC)
+                    self.present(navController, animated: true)
+                }
+            }
+        if let viewLogins = viewLogins {
+            actions.append(UIMenu(options: .displayInline, children: [viewLogins]))
+        }
+
+        let openLibrary = UIAction(title: Strings.AppMenuLibraryTitleString) { _ in
+            self.showLibrary()
+        }
+        
+        let openHomePage = UIAction(title: Strings.AppMenuOpenHomePageTitleString) { _ in
+            let tab = self.tabManager.selectedTab
+            let page = NewTabAccessors.getHomePage(self.profile.prefs)
+            if page == .homePage, let homePageURL = HomeButtonHomePageAccessors.getHomePage(self.profile.prefs) {
+                tab?.loadRequest(PrivilegedRequest(url: homePageURL) as URLRequest)
+            } else if let homePanelURL = page.url {
+                tab?.loadRequest(PrivilegedRequest(url: homePanelURL) as URLRequest)
+            }
+        }
+        
+        actions.append(UIMenu(options: .displayInline, children: [openHomePage, openLibrary]))
+
+        let noImageMode = UIAction(title: "No Image Mode", state: (NoImageModeHelper.isActivated(profile.prefs) ? .on : .off)) { action in
+            let actionState = NoImageModeHelper.isActivated(self.profile.prefs)
+
+            NoImageModeHelper.toggle(isEnabled: !actionState, profile: self.profile, tabManager: self.tabManager)
+
+            // This isn't good, but I don't see any other way to force an update to the menu
+            self.toolbar?.appMenuButton.menu = self.getAppMenu()
+        }
+
+        let nightMode = UIAction(title: "Night Mode", state: (NightModeHelper.isActivated(profile.prefs) ? .on : .off)) { _ in
+            NightModeHelper.toggle(self.profile.prefs, tabManager: self.tabManager)
+
+            // If we've enabled night mode and the theme is normal, enable dark theme
+            if NightModeHelper.isActivated(self.profile.prefs), ThemeManager.instance.currentName == .normal {
+                ThemeManager.instance.current = DarkTheme()
+                NightModeHelper.setEnabledDarkTheme(self.profile.prefs, darkTheme: true)
+            }
+
+            // If we've disabled night mode and dark theme was activated by it then disable dark theme
+            if !NightModeHelper.isActivated(self.profile.prefs), NightModeHelper.hasEnabledDarkTheme(self.profile.prefs), ThemeManager.instance.currentName == .dark {
+                ThemeManager.instance.current = NormalTheme()
+                NightModeHelper.setEnabledDarkTheme(self.profile.prefs, darkTheme: false)
+            }
+
+            // This isn't good, but I don't see any other way to force an update to the menu
+            self.toolbar?.appMenuButton.menu = self.getAppMenu()
+        }
+
+        let openSettings = UIAction(title: Strings.AppMenuSettingsTitleString) { _ in
+            let settingsTableViewController = AppSettingsTableViewController()
+            settingsTableViewController.profile = self.profile
+            settingsTableViewController.tabManager = self.tabManager
+            settingsTableViewController.settingsDelegate = self
+
+            let controller = ThemedNavigationController(rootViewController: settingsTableViewController)
+            // On iPhone iOS13 the WKWebview crashes while presenting file picker if its not full screen. Ref #6232
+            if UIDevice.current.userInterfaceIdiom == .phone {
+                controller.modalPresentationStyle = .fullScreen
+            }
+            controller.presentingModalViewControllerDelegate = self
+
+            // Wait to present VC in an async dispatch queue to prevent a case where dismissal
+            // of this popover on iPad seems to block the presentation of the modal VC.
+            DispatchQueue.main.async {
+                self.present(controller, animated: true, completion: nil)
+            }
+        }
+        actions.append(UIMenu(options: .displayInline, children: [openSettings, whatsNewAction, nightMode, noImageMode]))
+        
+        return UIMenu(children: actions.reversed())
     }
 
     func tabToolbarDidPressMenu(_ tabToolbar: TabToolbarProtocol, button: UIButton) {
@@ -79,7 +232,7 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
 
         // ensure that any keyboards or spinners are dismissed before presenting the menu
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        libraryDrawerViewController?.close(immediately: true)
+        libraryViewController?.dismiss(animated: true)
         var actions: [[PhotonActionSheetItem]] = []
 
         let syncAction = syncMenuButton(showFxA: presentSignInViewController)
@@ -88,7 +241,7 @@ extension BrowserViewController: TabToolbarDelegate, PhotonActionSheetProtocol {
             PhotonActionSheetItem(title: Strings.LoginsAndPasswordsTitle, iconString: "key", iconType: .Image, iconAlignment: .left, isEnabled: true) { _, _ in
             guard let navController = self.navigationController else { return }
             let navigationHandler: ((_ url: URL?) -> Void) = { url in
-                UIApplication.shared.keyWindow?.rootViewController?.dismiss(animated: true, completion: nil)
+                BrowserViewController.foregroundBVC().dismiss(animated: true, completion: nil)
                 self.openURLInNewTab(url)
             }
             LoginListViewController.create(authenticateInNavigationController: navController, profile: self.profile, settingsDelegate: self, webpageNavigationHandler: navigationHandler).uponQueue(.main) { loginsVC in

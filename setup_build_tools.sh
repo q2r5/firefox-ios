@@ -11,7 +11,7 @@
 # Check if XCode Command Line Tools are installed
 #
 which -s xcode-select
-if [[ $? != 0 ]] ; then
+if [ $? != 0 ] ; then
 	echo "Installing XCode Command Line Tools"
 	# Install XCode Command Line Tools
 	xcode-select --install
@@ -23,7 +23,7 @@ fi
 # Check if Homebrew is installed
 #
 which -s brew
-if [[ $? != 0 ]] ; then
+if [ $? != 0 ] ; then
     # Install Homebrew
 	echo "Installing Homebrew"
     ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -34,7 +34,7 @@ fi
 #
 # Check if python is installed
 #
-if [ ! -e $(python -c 'from distutils.sysconfig import get_makefile_filename as m; print m()') ]; then
+if [ ! -e "$(python -c 'from distutils.sysconfig import get_makefile_filename as m; print m()')" ]; then
 	# Install python
 	echo "Installing python"
 	brew install python
@@ -46,7 +46,7 @@ fi
 # Check if virtualenv is installed
 #
 which -s virtualenv
-if [[ $? != 0 ]] ; then
+if [ $? != 0 ] ; then
     # Install virtualenv
 	echo "Installing vitualenv"
     pip install virtualenv
@@ -65,7 +65,7 @@ fi
 # Check if Carthage is installed
 #
 which -s carthage
-if [[ $? != 0 ]] ; then
+if [ $? != 0 ] ; then
     # Install Carthage
     echo "Installing Carthage"
     brew install carthage
@@ -77,7 +77,7 @@ fi
 # Check if Node is installed
 #
 which -s node
-if [[ $? != 0 ]] ; then
+if [ $? != 0 ] ; then
     # Install Node
     echo "Installing Node.js"
     brew install node
@@ -89,7 +89,7 @@ fi
 # Check if fastlane is installed
 #
 which -s fastlane
-if [[ $? != 0 ]] ; then
+if [ $? != 0 ] ; then
     # Install fastlane
 	echo "Installing fastlane."
     sudo gem install fastlane

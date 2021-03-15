@@ -59,4 +59,3 @@ Object.defineProperty(window.__firefox__, "download", {
 });
 }
 
-

@@ -3,8 +3,6 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 import Shared
-import SwiftyJSON
-import SyncTelemetry
 import Account
 import SwiftKeychainWrapper
 import os.log
@@ -33,14 +31,14 @@ extension FxAPushMessageHandler {
     @discardableResult func handle(userInfo: [AnyHashable: Any]) -> PushMessageResult {
         let keychain = KeychainWrapper.sharedAppContainerKeychain
         guard let pushReg = keychain.object(forKey: KeychainKey.fxaPushRegistration) as? PushRegistration else {
-            return deferMaybe(PushMessageError.accountError)
+            return deferResult(PushMessageError.accountError)
         }
 
         let subscription = pushReg.defaultSubscription
 
         guard let encoding = userInfo["con"] as? String, // content-encoding
             let payload = userInfo["body"] as? String else {
-                return deferMaybe(PushMessageError.messageIncomplete("missing con or body"))
+                return deferResult(PushMessageError.messageIncomplete("missing con or body"))
         }
         // ver == endpointURL path, chid == channel id, aps == alert text and content_available.
 
@@ -58,71 +56,72 @@ extension FxAPushMessageHandler {
         guard let string = plaintext else {
             // The app will detect this missing, and re-register. see AppDelegate+PushNotifications.swift.
             keychain.removeObject(forKey: KeychainKey.apnsToken, withAccessibility: .afterFirstUnlock)
-            return deferMaybe(PushMessageError.notDecrypted)
+            return deferResult(PushMessageError.notDecrypted)
         }
 
         // return handle(plaintext: string)
         let deferred = PushMessageResult()
-        RustFirefoxAccounts.reconfig(prefs: profile.prefs).uponQueue(.main) { accountManager in
-            accountManager.deviceConstellation()?.processRawIncomingAccountEvent(pushPayload: string) {
-                result in
-                guard case .success(let events) = result, let firstEvent = events.first else {
-                    let err: PushMessageError
-                    if case .failure(let error) = result {
-                        err = PushMessageError.messageIncomplete(error.localizedDescription)
-                    } else {
-                        err = PushMessageError.messageIncomplete("empty message")
-                    }
-                    deferred.fill(Maybe(failure: err))
-                    return
-                }
-                if events.count > 1 {
-                    // Log to the console for debugging release builds
-                    os_log("%{public}@", log: OSLog(subsystem: "org.mozilla.firefox", category: "firefoxnotificationservice"), type: OSLogType.debug, "Multiple events arrived, only handling the first event.")
-                }
-                switch firstEvent {
-                case .incomingDeviceCommand(let deviceCommand):
-                    switch deviceCommand {
-                    case .tabReceived(_, let tabData):
-                        let title = tabData.last?.title ?? ""
-                        let url = tabData.last?.url ?? ""
-                        let message = PushMessage.commandReceived(tab: ["title": title, "url": url])
-                        if let json = try? accountManager.gatherTelemetry() {
-                            let events = FxATelemetry.parseTelemetry(fromJSONString: json)
-                            events.forEach { $0.record(intoPrefs: self.profile.prefs) }
+        DispatchQueue.main.async {
+            RustFirefoxAccounts.reconfig(prefs: self.profile.prefs).uponQueue(.main) { accountManager in
+                accountManager.deviceConstellation()?.processRawIncomingAccountEvent(pushPayload: string) {
+                    result in
+                    guard case .success(let events) = result, let firstEvent = events.first else {
+                        let err: PushMessageError
+                        if case .failure(let error) = result {
+                            err = PushMessageError.messageIncomplete(error.localizedDescription)
+                        } else {
+                            err = PushMessageError.messageIncomplete("empty message")
                         }
-                        deferred.fill(Maybe(success: message))
-                    }
-                case .deviceConnected(let deviceName):
-                    let message = PushMessage.deviceConnected(deviceName)
-                    deferred.fill(Maybe(success: message))
-                case let .deviceDisconnected(deviceId, isLocalDevice):
-                    if isLocalDevice {
-                        // We can't disconnect the device from the account until we have access to the application, so we'll handle this properly in the AppDelegate (as this code in an extension),
-                        // by calling the FxALoginHelper.applicationDidDisonnect(application).
-                        self.profile.prefs.setBool(true, forKey: PendingAccountDisconnectedKey)
-                        let message = PushMessage.thisDeviceDisconnected
-                        deferred.fill(Maybe(success: message))
+                        deferred.fill(Result.failure(err))
                         return
                     }
-
-                    guard let profile = self.profile as? BrowserProfile else {
-                        // We can't look up a name in testing, so this is the same as not knowing about it.
-                        let message = PushMessage.deviceDisconnected(nil)
-                        deferred.fill(Maybe(success: message))
-                        return
+                    if events.count > 1 {
+                        // Log to the console for debugging release builds
+                        os_log("%{public}@", log: OSLog(subsystem: "org.mozilla.firefox", category: "firefoxnotificationservice"), type: OSLogType.debug, "Multiple events arrived, only handling the first event.")
                     }
+                    switch firstEvent {
+                    case .commandReceived(let deviceCommand):
+                        switch deviceCommand {
+                        case .tabReceived(_, let tabData):
+                            let title = tabData.entries.last?.title ?? ""
+                            let url = tabData.entries.last?.url ?? ""
+                            let message = PushMessage.commandReceived(tab: ["title": title, "url": url])
+                            deferred.fill(Result.success(message))
+                        }
+                    case .deviceConnected(let deviceName):
+                        let message = PushMessage.deviceConnected(deviceName)
+                        deferred.fill(Result.success(message))
+                    case let .deviceDisconnected(deviceId, isLocalDevice):
+                        if isLocalDevice {
+                            // We can't disconnect the device from the account until we have access to the application, so we'll handle this properly in the AppDelegate (as this code in an extension),
+                            // by calling the FxALoginHelper.applicationDidDisonnect(application).
+                            self.profile.prefs.setBool(true, forKey: PendingAccountDisconnectedKey)
+                            let message = PushMessage.thisDeviceDisconnected
+                            deferred.fill(Result.success(message))
+                            return
+                        }
 
-                    profile.remoteClientsAndTabs.getClient(fxaDeviceId: deviceId).uponQueue(.main) { result in
-                        guard let device = result.successValue else { return }
-                        let message = PushMessage.deviceDisconnected(device?.name)
-                        if let id = device?.guid {
-                            profile.remoteClientsAndTabs.deleteClient(guid: id).uponQueue(.main) { _ in
-                                print("deleted client")
+                        guard let profile = self.profile as? BrowserProfile else {
+                            // We can't look up a name in testing, so this is the same as not knowing about it.
+                            let message = PushMessage.deviceDisconnected(nil)
+                            deferred.fill(Result.success(message))
+                            return
+                        }
+
+                        profile.remoteClientsAndTabs.getClient(fxaDeviceId: deviceId).uponQueue(.main) { result in
+                            guard let device = result.successValue else { return }
+                            let message = PushMessage.deviceDisconnected(device?.name)
+                            if let id = device?.guid {
+                                profile.remoteClientsAndTabs.deleteClient(guid: id).uponQueue(.main) { _ in
+                                    print("deleted client")
+                                }
                             }
-                        }
 
-                        deferred.fill(Maybe(success: message))
+                            deferred.fill(Result.success(message))
+                        }
+                    default:
+                        // There are other events, but we ignore them at this level.
+                        do {}
                     }
                 }
             }
@@ -186,7 +185,7 @@ enum PushMessage: Equatable {
     }
 }
 
-typealias PushMessageResult = Deferred<Maybe<PushMessage>>
+typealias PushMessageResult = Deferred<Result<PushMessage, PushMessageError>>
 
 enum PushMessageError: MaybeErrorType {
     case notDecrypted

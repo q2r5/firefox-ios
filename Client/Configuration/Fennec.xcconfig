@@ -5,9 +5,8 @@
 #include "Common.xcconfig"
 #include "Debug.xcconfig"
 
-INFOPLIST_FILE = Client/Info.plist
 MOZ_BUNDLE_DISPLAY_NAME = Fennec ($(USER))
-MOZ_BUNDLE_ID = org.mozilla.ios.Fennec
+MOZ_BUNDLE_ID = com.q2r5.Fennec
 // Flag to indicate if we want to include the debug settings bundle or not
 INCLUDE_SETTINGS_BUNDLE = YES
 LEANPLUM_ENVIRONMENT = development
@@ -15,3 +14,4 @@ MOZ_TODAY_WIDGET_SEARCH_DISPLAY_NAME = Firefox - Search
 CODE_SIGN_ENTITLEMENTS = Client/Entitlements/FennecApplication.entitlements
 OTHER_SWIFT_FLAGS = $(OTHER_SWIFT_FLAGS_common) -DMOZ_CHANNEL_FENNEC
 MOZ_INTERNAL_URL_SCHEME = fennec
+DEVELOPMENT_TEAM = 6YL5Z34V65

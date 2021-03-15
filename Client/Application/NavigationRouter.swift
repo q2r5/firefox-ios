@@ -112,6 +112,12 @@ enum NavigationPath {
             // Use the last browsing mode the user was in
             let isPrivate = UserDefaults.standard.bool(forKey: "wasLastSessionPrivate")
             self = .url(webURL: url, isPrivate: isPrivate)
+
+            // Tracking for default browser
+            if (urlString.starts(with: "http:") ||  urlString.starts(with: "https:") && UserDefaults.standard.bool(forKey: "OpenedAsDefaultBrowser")) {
+                TelemetryWrapper.gleanRecordEvent(category: .action, method: .open, object: .asDefaultBrowser)
+                UserDefaults.standard.set(true, forKey: "OpenedAsDefaultBrowser")
+            }
         } else {
             return nil
         }

@@ -87,6 +87,7 @@ public struct PhotonActionSheetItem {
         self.iconURL = iconURL
         self.iconType = iconType
         self.iconAlignment = iconAlignment
+        self.iconTint = iconTint
         self.isEnabled = isEnabled
         self.accessory = accessory
         self.tapHandler = handler

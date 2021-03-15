@@ -21,8 +21,20 @@ infix operator >>> : MonadicDoPrecedence
     return chainDeferred(x, f: f)
 }
 
+@discardableResult public func >>== <T, U, V: Error>(x: Deferred<Result<T, V>>, f: @escaping (T) -> Deferred<Result<U, V>>) -> Deferred<Result<U, V>> {
+    return chainDeferred(x, f: f)
+}
+
 // A termination case.
 public func >>== <T>(x: Deferred<Maybe<T>>, f: @escaping (T) -> Void) {
+    return x.upon { result in
+        if let v = result.successValue {
+            f(v)
+        }
+    }
+}
+
+public func >>== <T, U: Error>(x: Deferred<Result<T, U>>, f: @escaping (T) -> Void) {
     return x.upon { result in
         if let v = result.successValue {
             f(v)
@@ -60,14 +72,26 @@ public func deferMaybe<T>(_ s: T) -> Deferred<Maybe<T>> {
     return Deferred(value: Maybe(success: s))
 }
 
+public func deferResult<T>(_ s: T) -> Deferred<Result<T, Error>> {
+    return Deferred(value: Result.success(s))
+}
+
 // This specific overload prevents Strings, which conform to MaybeErrorType, from
 // always matching the failure case. See <https://github.com/mozilla-mobile/firefox-ios/issues/7791>.
 public func deferMaybe(_ s: String) -> Deferred<Maybe<String>> {
     return Deferred(value: Maybe(success: s))
 }
 
+public func deferResult(_ s: String) -> Deferred<Result<String, Error>> {
+    return Deferred(value: Result.success(s))
+}
+
 public func deferMaybe<T>(_ e: MaybeErrorType) -> Deferred<Maybe<T>> {
     return Deferred(value: Maybe(failure: e))
+}
+
+public func deferResult<T, U>(_ e: U) -> Deferred<Result<T, U>> where U : MaybeErrorType {
+    return Deferred(value: Result.failure(e))
 }
 
 public typealias Success = Deferred<Maybe<Void>>
@@ -185,6 +209,17 @@ public func chainDeferred<T, U>(_ a: Deferred<Maybe<T>>, f: @escaping (T) -> Def
     }
 }
 
+public func chainDeferred<T, U, V: Error>(_ a: Deferred<Result<T, V>>, f: @escaping (T) -> Deferred<Result<U, V>>) -> Deferred<Result<U, V>> {
+    return a.bind { res in
+        switch res {
+        case .success(let v):
+            return f(v)
+        case .failure(let e):
+            return Deferred(value: Result.failure(e))
+        }
+    }
+}
+
 public func chainResult<T, U>(_ a: Deferred<Maybe<T>>, f: @escaping (T) -> Maybe<U>) -> Deferred<Maybe<U>> {
     return a.map { res in
         if let v = res.successValue {
@@ -208,4 +243,33 @@ public func deferDispatchAsync<T>(_ queue: DispatchQueue, f: @escaping () -> Def
     })
 
     return deferred
+}
+
+extension Result {
+    public var isFailure: Bool {
+        switch self {
+        case .success(_):
+            return false
+        case .failure(_):
+            return true
+        }
+    }
+    
+    public var isSuccess: Bool {
+        switch self {
+        case .success(_):
+            return true
+        case .failure(_):
+            return false
+        }
+    }
+    
+    public var successValue: Success? {
+        switch self {
+        case .success(let s):
+            return s
+        case .failure(_):
+            return nil
+        }
+    }
 }

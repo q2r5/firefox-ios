@@ -5,7 +5,6 @@
 import Foundation
 import Shared
 import WebKit
-import SwiftyJSON
 
 let ReaderModeProfileKeyStyle = "readermode.style"
 
@@ -79,8 +78,8 @@ enum ReaderModeFontType: String {
         } 
     }
     
-    func isSameFamily(_ font: ReaderModeFontType) -> Bool {        
-        return !FontFamily.families.filter { $0.contains(font) && $0.contains(self) }.isEmpty        
+    func isSameFamily(_ font: ReaderModeFontType) -> Bool {
+        return !FontFamily.families.filter { $0.contains(font) && $0.contains(self) }.isEmpty
     }
 }
 
@@ -152,7 +151,7 @@ struct ReaderModeStyle {
 
     /// Encode the style to a JSON dictionary that can be passed to ReaderMode.js
     func encode() -> String {
-        return JSON(["theme": theme.rawValue, "fontType": fontType.rawValue, "fontSize": fontSize.rawValue]).stringify() ?? ""
+        return (try? JSONSerialization.data(withJSONObject: ["theme": theme.rawValue, "fontType": fontType.rawValue, "fontSize": fontSize.rawValue]).utf8EncodedString) ?? ""
     }
 
     /// Encode the style to a dictionary that can be stored in the profile
@@ -228,12 +227,15 @@ struct ReadabilityResult {
 
     /// Initialize from a JSON encoded string
     init?(string: String) {
-        let object = JSON(parseJSON: string)
-        let domain = object["domain"].string
-        let url = object["url"].string
-        let content = object["content"].string
-        let title = object["title"].string
-        let credits = object["credits"].string
+        guard let jsonData = string.data(using: .utf8),
+              let object = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
+            return nil
+        }
+        let domain = object["domain"] as? String
+        let url = object["url"] as? String
+        let content = object["content"] as? String
+        let title = object["title"] as? String
+        let credits = object["credits"] as? String
 
         if domain == nil || url == nil || content == nil || title == nil || credits == nil {
             return nil
@@ -254,7 +256,7 @@ struct ReadabilityResult {
     /// Encode to a JSON encoded string
     func encode() -> String {
         let dict: [String: Any] = self.encode()
-        return JSON(dict).stringify()!
+        return try! JSONSerialization.data(withJSONObject: dict).utf8EncodedString ?? ""
     }
 }
 
@@ -332,9 +334,7 @@ class ReaderMode: TabContentScript {
     var style: ReaderModeStyle = DefaultReaderModeStyle {
         didSet {
             if state == ReaderModeState.active {
-                tab?.webView?.evaluateJavascriptInDefaultContentWorld("\(ReaderModeNamespace).setStyle(\(style.encode()))") { object, error in
-                    return
-                }
+                tab?.webView?.evaluateJavascriptInDefaultContentWorld("\(ReaderModeNamespace).setStyle(\(style.encode()))")
             }
         }
     }

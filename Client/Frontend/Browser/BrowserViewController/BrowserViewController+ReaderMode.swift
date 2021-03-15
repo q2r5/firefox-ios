@@ -166,7 +166,7 @@ extension BrowserViewController {
 
 extension BrowserViewController: ReaderModeBarViewDelegate {
     func readerModeBar(_ readerModeBar: ReaderModeBarView, didSelectButton buttonType: ReaderModeBarButtonType) {
-        libraryDrawerViewController?.close()
+        libraryViewController?.dismiss(animated: true)
 
         switch buttonType {
         case .settings:

@@ -16,6 +16,81 @@ protocol TextFieldTableViewCellDelegate: AnyObject {
     func textFieldTableViewCell(_ textFieldTableViewCell: TextFieldTableViewCell, didChangeText text: String)
 }
 
+struct TextFieldCellContentConfiguration: UIContentConfiguration, Hashable {
+    var titleText: NSAttributedString
+    var titleColor: UIColor
+    var titleFont: UIFont
+    var textViewColor: UIColor
+    var textViewFont: UIFont
+
+    func makeContentView() -> UIView & UIContentView {
+        return TextFieldCellContentView(configuration: self)
+    }
+
+    func updated(for state: UIConfigurationState) -> TextFieldCellContentConfiguration {
+//        guard let state = state as? UICellConfigurationState else { return self }
+
+        var updatedConfiguration = self
+        updatedConfiguration.textViewColor = UIColor.theme.tableView.rowText
+        return updatedConfiguration
+    }
+}
+
+class TextFieldCellContentView: UIView, UIContentView {
+    private var contentConfiguration: TextFieldCellContentConfiguration
+    var configuration: UIContentConfiguration {
+        get {
+            return contentConfiguration
+        }
+        set {
+            guard let newConfig = newValue as? TextFieldCellContentConfiguration else {
+                return
+            }
+
+            configure(for: newConfig)
+        }
+    }
+
+    private let titleLabel = UILabel(frame: .zero)
+    private let textField = UITextField(frame: .zero)
+
+    init(configuration: TextFieldCellContentConfiguration) {
+        self.contentConfiguration = configuration
+        super.init(frame: .zero)
+        self.addSubview(self.titleLabel)
+        self.addSubview(self.textField)
+        titleLabel.snp.makeConstraints { make in
+            make.leading.equalTo(TextFieldTableViewCellUX.HorizontalMargin)
+            make.trailing.equalTo(-TextFieldTableViewCellUX.HorizontalMargin)
+            make.top.equalTo(TextFieldTableViewCellUX.VerticalMargin)
+        }
+
+        textField.snp.makeConstraints { make in
+            make.leading.equalTo(TextFieldTableViewCellUX.HorizontalMargin)
+            make.trailing.equalTo(-TextFieldTableViewCellUX.HorizontalMargin)
+            make.bottom.equalTo(-TextFieldTableViewCellUX.VerticalMargin)
+        }
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    private func configure(for configuration: TextFieldCellContentConfiguration) {
+        guard contentConfiguration != configuration else {
+            return
+        }
+        contentConfiguration = configuration
+
+        titleLabel.font = configuration.titleFont
+        titleLabel.attributedText = configuration.titleText
+        titleLabel.textColor = configuration.titleColor
+
+        textField.font = configuration.textViewFont
+        textField.textColor = configuration.textViewColor
+    }
+}
+
 class TextFieldTableViewCell: UITableViewCell, Themeable {
     let titleLabel: UILabel
     let textField: UITextField

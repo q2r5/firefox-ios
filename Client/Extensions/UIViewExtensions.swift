@@ -8,24 +8,24 @@ extension UIView {
     /**
      * Takes a screenshot of the view with the given size.
      */
-    func screenshot(_ size: CGSize, offset: CGPoint? = nil, quality: CGFloat = 1) -> UIImage? {
+    func screenshot(_ size: CGSize, offset: CGPoint? = nil, quality: CGFloat = 1) -> UIImage {
         assert(0...1 ~= quality)
 
         let offset = offset ?? .zero
 
-        UIGraphicsBeginImageContextWithOptions(size, false, UIScreen.main.scale * quality)
-        drawHierarchy(in: CGRect(origin: offset, size: frame.size), afterScreenUpdates: false)
-        let image = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = UIScreen.main.scale * quality
 
-        return image
+        return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            drawHierarchy(in: CGRect(origin: offset, size: size), afterScreenUpdates: false)
+        }
     }
 
     /**
      * Takes a screenshot of the view with the given aspect ratio.
      * An aspect ratio of 0 means capture the entire view.
      */
-    func screenshot(_ aspectRatio: CGFloat = 0, offset: CGPoint? = nil, quality: CGFloat = 1) -> UIImage? {
+    func screenshot(_ aspectRatio: CGFloat = 0, offset: CGPoint? = nil, quality: CGFloat = 1) -> UIImage {
         assert(aspectRatio >= 0)
 
         var size: CGSize
@@ -50,8 +50,18 @@ extension UIView {
      * Performs a deep copy of the view. Does not copy constraints.
      */
     @objc func clone() -> UIView {
-        let data = NSKeyedArchiver.archivedData(withRootObject: self)
-        return NSKeyedUnarchiver.unarchiveObject(with: data) as! UIView
+        do {
+            let data = try NSKeyedArchiver.archivedData(withRootObject: self, requiringSecureCoding: false)
+            let unarchiver = try NSKeyedUnarchiver(forReadingFrom: data)
+            unarchiver.requiresSecureCoding = false
+            let view = unarchiver.decodeObject() as? UIView
+            if let view = view {
+                return view
+            }
+        } catch let error {
+            assertionFailure("View failed to clone. " + error.localizedDescription)
+        }
+        return UIView()
     }
 
     /**

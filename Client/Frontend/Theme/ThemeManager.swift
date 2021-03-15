@@ -10,6 +10,22 @@ enum ThemeManagerPrefs: String {
     case themeName = "prefKeyThemeName"
 }
 
+extension UIConfigurationStateCustomKey {
+    static let currentTheme = UIConfigurationStateCustomKey("org.mozilla.Firefox.currentTheme")
+}
+
+extension UIConfigurationState {
+    var currentTheme: Theme {
+        get {
+            return themeFrom(name: self[.currentTheme] as? String)
+        }
+        set {
+            self[.currentTheme] = newValue.name
+            ThemeManager.instance.current = newValue
+        }
+    }
+}
+
 class ThemeManager {
     static let instance = ThemeManager()
 

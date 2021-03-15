@@ -139,7 +139,7 @@ extension Date {
     }
     
     public func isWithinLast7Days() -> Bool {
-        return (Date().lastWeek ... Date()).contains(self)
+        return (self.lastWeek ... Date()).contains(self)
     }
 }
 
@@ -150,8 +150,7 @@ let MaxTimestampAsDouble = Double(UInt64.max)
  *  when seconds were expected.
  */
 public func someKindOfTimestampStringToTimestamp(_ input: String) -> Timestamp? {
-    var double = 0.0
-    if Scanner(string: input).scanDouble(&double) {
+    if let double = Scanner(string: input).scanDouble() {
         // This should never happen. Hah!
         if double.isNaN || double.isInfinite {
             return nil
@@ -185,8 +184,7 @@ public func someKindOfTimestampStringToTimestamp(_ input: String) -> Timestamp? 
 }
 
 public func decimalSecondsStringToTimestamp(_ input: String) -> Timestamp? {
-    var double = 0.0
-    if Scanner(string: input).scanDouble(&double) {
+    if let double = Scanner(string: input).scanDouble() {
         // This should never happen. Hah!
         if double.isNaN || double.isInfinite {
             return nil

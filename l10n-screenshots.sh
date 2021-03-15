@@ -8,8 +8,8 @@ function get_abs_path {
     echo "$( cd "$(dirname "$file_path")" >/dev/null 2>&1 ; pwd -P )"
 }
 
-CURRENT_DIR="$(get_abs_path $0)"
-PROJECT_DIR="$(get_abs_path $CURRENT_DIR/../../../..)"
+CURRENT_DIR="$(get_abs_path "$0")"
+PROJECT_DIR="$(get_abs_path "$CURRENT_DIR/../../../..")"
 
 
 if [ -d l10n-screenshots ]; then

@@ -13,9 +13,8 @@ import XCGLogger
 import Account
 import MobileCoreServices
 import SDWebImage
-import SwiftyJSON
 import Telemetry
-import MozillaAppServices
+import Sync
 import Sentry
 
 private let KVOs: [KVOConstants] = [
@@ -54,6 +53,7 @@ class BrowserViewController: UIViewController {
     var libraryDrawerViewController: DrawerViewController?
     var webViewContainer: UIView!
     var urlBar: URLBarView!
+    var urlBarHeightConstraint: Constraint!
     var clipboardBarDisplayHandler: ClipboardBarDisplayHandler?
     var readerModeBar: ReaderModeBarView?
     var readerModeCache: ReaderModeCache
@@ -184,6 +184,8 @@ class BrowserViewController: UIViewController {
         tabManager.addNavigationDelegate(self)
         downloadQueue.delegate = self
 
+        _ = profile.places.reopenIfClosed()
+
         NotificationCenter.default.addObserver(self, selector: #selector(displayThemeChanged), name: .DisplayThemeChanged, object: nil)
   }
 
@@ -220,6 +222,7 @@ class BrowserViewController: UIViewController {
         }
     }
 
+    @available(iOS, obsoleted: 13.0)
     fileprivate func constraintsForLibraryDrawerView(_ make: SnapKit.ConstraintMaker) {
         guard libraryDrawerViewController?.view.superview != nil else { return }
         if self.topTabsVisible {
@@ -273,6 +276,8 @@ class BrowserViewController: UIViewController {
                 toolbar?.updateMiddleButtonState(currentMiddleButtonState ?? .search)
             }
             updateTabCountUsingTabManager(self.tabManager)
+            toolbar?.appMenuButton.menu = getAppMenu()
+            toolbar?.appMenuButton.showsMenuAsPrimaryAction = true
         }
 
         appMenuBadgeUpdate()
@@ -313,7 +318,9 @@ class BrowserViewController: UIViewController {
             navigationToolbar.updateForwardStatus(webView.canGoForward)
         }
 
-        libraryDrawerViewController?.view.snp.remakeConstraints(constraintsForLibraryDrawerView)
+        if #available(iOS 13.0, *) {
+            return
+        }
     }
 
     override func willTransition(to newCollection: UITraitCollection, with coordinator: UIViewControllerTransitionCoordinator) {
@@ -507,7 +514,7 @@ class BrowserViewController: UIViewController {
 
         urlBar.snp.makeConstraints { make in
             make.leading.trailing.bottom.equalTo(urlBarTopTabsContainer)
-            make.height.equalTo(UIConstants.TopToolbarHeightMax)
+            self.urlBarHeightConstraint = make.height.equalTo(UIConstants.TopToolbarHeightMax).constraint
             make.top.equalTo(topTabsContainer.snp.bottom)
         }
 
@@ -526,6 +533,23 @@ class BrowserViewController: UIViewController {
         statusBarOverlay.snp.remakeConstraints { make in
             make.top.left.right.equalTo(self.view)
             make.height.equalTo(self.view.safeAreaInsets.top)
+        }
+
+        adjustURLBarHeightBasedOnLocationViewHeight()
+    }
+
+    fileprivate func adjustURLBarHeightBasedOnLocationViewHeight() {
+        // Make sure that we have a height to actually base our calculations on
+        guard urlBar.locationContainer.bounds.height != 0 else { return }
+        let locationViewHeight = urlBar.locationView.bounds.height
+        let heightWithPadding = locationViewHeight + 10
+
+        // We have to deactivate the original constraint, and remake the constraint
+        // or else funky conflicts happen
+        urlBarHeightConstraint.deactivate()
+        urlBar.snp.makeConstraints { make in
+            let height =  heightWithPadding > UIConstants.TopToolbarHeightMax ? UIConstants.TopToolbarHeight : heightWithPadding
+            self.urlBarHeightConstraint = make.height.equalTo(height).constraint
         }
     }
 
@@ -831,12 +855,11 @@ class BrowserViewController: UIViewController {
             libraryViewController.selectedPanel = panel
         }
 
-        let libraryDrawerViewController = self.libraryDrawerViewController ?? DrawerViewController(childViewController: libraryViewController)
-        self.libraryDrawerViewController = libraryDrawerViewController
-
-        addChild(libraryDrawerViewController)
-        view.addSubview(libraryDrawerViewController.view)
-        libraryDrawerViewController.view.snp.remakeConstraints(constraintsForLibraryDrawerView)
+        if #available(iOS 13.0, *) {
+            let controller = UINavigationController(rootViewController: libraryViewController)
+            controller.modalPresentationStyle = .pageSheet
+            present(controller, animated: true, completion: nil)
+        }
     }
 
     fileprivate func createSearchControllerIfNeeded() {
@@ -959,11 +982,6 @@ class BrowserViewController: UIViewController {
             return
         }
 
-        if let helper = tab.getContentScript(name: ContextMenuHelper.name()) as? ContextMenuHelper {
-            // This is zero-cost if already installed. It needs to be checked frequently (hence every event here triggers this function), as when a new tab is created it requires multiple attempts to setup the handler correctly.
-             helper.replaceGestureHandlerIfNeeded()
-        }
-
         switch path {
         case .estimatedProgress:
             guard tab === tabManager.selectedTab else { break }
@@ -980,7 +998,6 @@ class BrowserViewController: UIViewController {
         case .URL:
             // Special case for "about:blank" popups, if the webView.url is nil, keep the tab url as "about:blank"
             if tab.url?.absoluteString == "about:blank" && webView.url == nil {
-                print(webView.url?.origin)
                 break
             }
 
@@ -1044,12 +1061,14 @@ class BrowserViewController: UIViewController {
         urlBar.locationView.showLockIcon(forSecureContent: tab.webView?.hasOnlySecureContent ?? false)
         let isPage = tab.url?.displayURL?.isWebPage() ?? false
         navigationToolbar.updatePageStatus(isPage)
+        urlBar.locationView.pageOptionsButton.menu = getPageActionMenu()
+        urlBar.locationView.pageOptionsButton.showsMenuAsPrimaryAction = true
     }
 
     // MARK: Opening New Tabs
     func switchToPrivacyMode(isPrivate: Bool) {
          if let tabTrayController = self.tabTrayController, tabTrayController.tabDisplayManager.isPrivate != isPrivate {
-            tabTrayController.changePrivacyMode(isPrivate)
+            tabTrayController.didTogglePrivateMode(isPrivate)
         }
         topTabsViewController?.applyUIMode(isPrivate: isPrivate)
     }
@@ -1465,7 +1484,11 @@ extension BrowserViewController: LibraryPanelDelegate {
     func libraryPanel(didSelectURL url: URL, visitType: VisitType) {
         guard let tab = tabManager.selectedTab else { return }
         finishEditingAndSubmit(url, visitType: visitType, forTab: tab)
-        libraryDrawerViewController?.close()
+        if #available(iOS 13.0, *) {
+            libraryViewController?.dismiss(animated: true)
+        } else {
+            libraryDrawerViewController?.close()
+        }
     }
 
     func libraryPanel(didSelectURLString url: String, visitType: VisitType) {
@@ -1557,7 +1580,11 @@ extension BrowserViewController: SearchViewControllerDelegate {
 
 extension BrowserViewController: TabManagerDelegate {
     func tabManager(_ tabManager: TabManager, didSelectedTabChange selected: Tab?, previous: Tab?, isRestoring: Bool) {
-        libraryDrawerViewController?.close(immediately: true)
+        if #available(iOS 13.0, *) {
+            libraryViewController?.dismiss(animated: true)
+        } else {
+            libraryDrawerViewController?.close()
+        }
 
         // Reset the scroll position for the ActivityStreamPanel so that it
         // is always presented scrolled to the top when switching tabs.
@@ -1725,9 +1752,7 @@ extension BrowserViewController: TabManagerDelegate {
     }
 
     func tabManagerDidRemoveAllTabs(_ tabManager: TabManager, toast: ButtonToast?) {
-        let tabTrayV2PrivateMode = tabTrayControllerV2?.viewModel.isInPrivateMode
-        let tabTrayV1PrivateMode = tabTrayController?.tabDisplayManager.isPrivate
-        guard let toast = toast, !(tabTrayV1PrivateMode ?? (tabTrayV2PrivateMode ?? false)) else {
+        guard let toast = toast, !(tabManager.selectedTab?.isPrivate ?? false) else {
             return
         }
         show(toast: toast, afterWaiting: ButtonToastUX.ToastDelay)
@@ -2137,10 +2162,10 @@ extension BrowserViewController: KeyboardHelperDelegate {
         keyboardState = state
         updateViewConstraints()
 
-        UIView.animate(withDuration: state.animationDuration) {
-            UIView.setAnimationCurve(state.animationCurve)
+        UIView.animate(withDuration: state.animationDuration, delay: 0,
+                       options: [UIView.AnimationOptions(rawValue: UInt(state.animationCurve.rawValue << 16))], animations: {
             self.alertStackView.layoutIfNeeded()
-        }
+        })
     }
 
     func keyboardHelper(_ keyboardHelper: KeyboardHelper, keyboardDidShowWithState state: KeyboardState) {
@@ -2151,10 +2176,10 @@ extension BrowserViewController: KeyboardHelperDelegate {
         keyboardState = nil
         updateViewConstraints()
 
-        UIView.animate(withDuration: state.animationDuration) {
-            UIView.setAnimationCurve(state.animationCurve)
+        UIView.animate(withDuration: state.animationDuration, delay: 0,
+                       options: [UIView.AnimationOptions(rawValue: UInt(state.animationCurve.rawValue << 16))], animations: {
             self.alertStackView.layoutIfNeeded()
-        }
+        })
     }
 }
 
@@ -2185,10 +2210,23 @@ extension BrowserViewController: TabTrayDelegate {
         addBookmark(url: url, title: tabState.title, favicon: tabState.favicon)
         TelemetryWrapper.recordEvent(category: .action, method: .add, object: .bookmark, value: .tabTray)
     }
+    
+    func tabTrayDidRemoveBookmark(_ tab: Tab) {
+        guard let url = tab.url?.absoluteString, !url.isEmpty else { return }
+        profile.places.deleteBookmarksWithURL(url: url).value.successValue
+        TelemetryWrapper.recordEvent(category: .action, method: .delete, object: .bookmark, value: .tabTray)
+    }
 
     func tabTrayDidAddToReadingList(_ tab: Tab) -> ReadingListItem? {
         guard let url = tab.url?.absoluteString, !url.isEmpty else { return nil }
         return profile.readingList.createRecordWithURL(url, title: tab.title ?? url, addedBy: UIDevice.current.name).value.successValue
+    }
+    
+    func tabTrayDidRemoveFromReadingList(_ tab: Tab) {
+        guard let url = tab.url?.absoluteString, !url.isEmpty else { return }
+        profile.readingList.getRecordWithURL(url) >>== { record in
+            self.profile.readingList.deleteRecord(record)
+        }
     }
 
     func tabTrayRequestsPresentationOf(_ viewController: UIViewController) {
@@ -2200,7 +2238,7 @@ extension BrowserViewController: TabTrayDelegate {
 extension BrowserViewController: Themeable {
     func applyTheme() {
         guard self.isViewLoaded else { return }
-        let ui: [Themeable?] = [urlBar, toolbar, readerModeBar, topTabsViewController, firefoxHomeViewController, searchController, libraryViewController, libraryDrawerViewController, tabTrayControllerV2]
+        let ui: [Themeable?] = [urlBar, toolbar, readerModeBar, topTabsViewController, firefoxHomeViewController, searchController, libraryViewController, tabTrayControllerV2]
         ui.forEach { $0?.applyTheme() }
         statusBarOverlay.backgroundColor = shouldShowTopTabsForTraitCollection(traitCollection) ? UIColor.Photon.Grey80 : urlBar.backgroundColor
         setNeedsStatusBarAppearanceUpdate()
@@ -2230,18 +2268,30 @@ extension BrowserViewController: JSPromptAlertControllerDelegate {
 
 extension BrowserViewController: TopTabsDelegate {
     func topTabsDidPressTabs() {
-        libraryDrawerViewController?.close(immediately: true)
+        if #available(iOS 13.0, *) {
+            libraryViewController?.dismiss(animated: true)
+        } else {
+            libraryDrawerViewController?.close(immediately: true)
+        }
         urlBar.leaveOverlayMode(didCancel: true)
         self.urlBarDidPressTabs(urlBar)
     }
 
     func topTabsDidPressNewTab(_ isPrivate: Bool) {
-        libraryDrawerViewController?.close(immediately: true)
+        if #available(iOS 13.0, *) {
+            libraryViewController?.dismiss(animated: true)
+        } else {
+            libraryDrawerViewController?.close(immediately: true)
+        }
         openBlankNewTab(focusLocationField: false, isPrivate: isPrivate)
     }
 
     func topTabsDidTogglePrivateMode() {
-        libraryDrawerViewController?.close(immediately: true)
+        if #available(iOS 13.0, *) {
+            libraryViewController?.dismiss(animated: true)
+        } else {
+            libraryDrawerViewController?.close(immediately: true)
+        }
         guard let _ = tabManager.selectedTab else {
             return
         }
@@ -2249,21 +2299,31 @@ extension BrowserViewController: TopTabsDelegate {
     }
 
     func topTabsDidChangeTab() {
-        libraryDrawerViewController?.close()
+        if #available(iOS 13.0, *) {
+            libraryViewController?.dismiss(animated: true)
+        } else {
+            libraryDrawerViewController?.close(immediately: true)
+        }
         urlBar.leaveOverlayMode(didCancel: true)
     }
 }
 
 extension BrowserViewController: DevicePickerViewControllerDelegate, InstructionsViewControllerDelegate {
+    func instructionsViewDidRequestToSignIn() {
+        self.dismissSignInViewController()
+        let fxaParams = FxALaunchParams(query: ["entrypoint": "homepanel"])
+        presentSignInViewController(fxaParams)
+    }
+
     func instructionsViewControllerDidClose(_ instructionsViewController: InstructionsViewController) {
         self.popToBVC()
     }
 
-    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePickerViewController) {
+    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePicker) {
         self.popToBVC()
     }
 
-    func devicePickerViewController(_ devicePickerViewController: DevicePickerViewController, didPickDevices devices: [RemoteDevice]) {
+    func devicePickerViewController(_ devicePickerViewController: DevicePicker, didPickDevices devices: [RemoteDevice]) {
         guard let tab = tabManager.selectedTab, let url = tab.canonicalURL?.displayURL?.absoluteString else { return }
         let shareItem = ShareItem(url: url, title: tab.title, favicon: tab.displayFavicon)
         guard shareItem.isShareable else {

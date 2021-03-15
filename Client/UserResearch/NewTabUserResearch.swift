@@ -8,7 +8,7 @@ import Shared
 
 class NewTabUserResearch {
     // Variable
-    var lpVariable: LPVar?
+    var lpVariable: Var
     // Constants
     private let enrollmentKey = "newTabUserResearchEnrollmentKey"
     private let newTabUserResearchKey = "newTabUserResearchKey"
@@ -48,7 +48,7 @@ class NewTabUserResearch {
     }
     
     // MARK: Initializer
-    init(lpVariable: LPVar? = LPVariables.newTabButtonABTest) {
+    init(lpVariable: Var = LPVariables.newTabButtonABTest) {
         self.lpVariable = lpVariable
     }
     
@@ -56,6 +56,7 @@ class NewTabUserResearch {
     func lpVariableObserver() {
         // Note: Until AB Test is finalized we are going to disable and not fetch any data from leanplum server
         return
+        /*
         // Condition: Leanplum is disabled; Set default New tab state
         guard LeanPlumClient.shared.getSettings() != nil else {
             // default state is false
@@ -69,27 +70,27 @@ class NewTabUserResearch {
                 return
             }
             self.fetchedExperimentVariables = true
-            //Only update add new tab (+ button) when it doesn't match leanplum value 
-            let lpValue = LPVariables.newTabButtonABTest?.boolValue() ?? false
-            if self.newTabState != lpValue {
-                self.newTabState = lpValue
+            //Only update add new tab (+ button) when it doesn't match leanplum value
+            if self.newTabState != LPVariables.newTabButtonABTest.boolValue() {
+                self.newTabState = LPVariables.newTabButtonABTest.boolValue()
                 self.updateTelemetry()
             }
         }
         // Condition: Leanplum server too slow; Set default New tab state
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-            guard self.fetchedExperimentVariables == false && self.newTabState == nil else {
+            guard self.fetchedExperimentVariables == false else {
                 return
             }
             // Condition: Leanplum server too slow; Set default New tab state
             self.newTabState = false
             // Condition: LP has already started but we missed onStartLPVariable callback
-            if case .started(startedState: _) = LeanPlumClient.shared.lpState , let boolValue = LPVariables.newTabButtonABTest?.boolValue() {
-                self.newTabState = boolValue
+            if case .started(startedState: _) = LeanPlumClient.shared.lpState {
+                self.newTabState = LPVariables.newTabButtonABTest.boolValue()
                 self.updateTelemetry()
             }
             self.fetchedExperimentVariables = true
         }
+        */
     }
     
     func updateTelemetry() {
@@ -97,10 +98,7 @@ class NewTabUserResearch {
         // Printing variant is good to know all details of A/B test fields
         print("lp variant \(String(describing: Leanplum.variants()))")
         var lpData: Dictionary<String, Any>?
-        guard let variants = Leanplum.variants() as? [Dictionary<String, Any>] else {
-            return
-        }
-        variants.forEach {
+        Leanplum.variants().forEach {
             if $0["abTestName"] as? String == abTestName {
                 lpData = $0
             }

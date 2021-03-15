@@ -35,7 +35,8 @@ class TabManagerStore {
 
     fileprivate func tabsStateArchivePath() -> String? {
         let profilePath: String?
-        if  AppConstants.IsRunningTest || AppConstants.IsRunningPerfTest {      profilePath = (UIApplication.shared.delegate as? TestAppDelegate)?.dirForTestProfile
+        if  AppConstants.IsRunningTest || AppConstants.IsRunningPerfTest {
+            profilePath = (UIApplication.shared.delegate as? TestAppDelegate)?.dirForTestProfile
         } else {
             profilePath = fileManager.containerURL( forSecurityApplicationGroupIdentifier: AppInfo.sharedContainerIdentifier)?.appendingPathComponent("profile.profile").path
         }
@@ -78,10 +79,11 @@ class TabManagerStore {
         writeOperation.cancel()
 
         let tabStateData = NSMutableData()
-        let archiver = NSKeyedArchiver(forWritingWith: tabStateData)
+        let archiver = NSKeyedArchiver(requiringSecureCoding: false)
 
         archiver.encode(savedTabs, forKey: "tabs")
         archiver.finishEncoding()
+        tabStateData.setData(archiver.encodedData)
         
         let simpleTabs = SimpleTab.convertToSimpleTabs(savedTabs)
         

@@ -7,7 +7,6 @@ import Shared
 import Storage
 import XCGLogger
 import WebKit
-import SwiftyJSON
 
 private let log = Logger.browserLogger
 
@@ -269,9 +268,13 @@ class LoginsHelper: TabContentScript {
                 "logins": logins
             ]
 
-            let json = JSON(dict)
-            let injectJavaScript = "window.__firefox__.logins.inject(\(json.stringify()!))"
-            self.tab?.webView?.evaluateJavascriptInDefaultContentWorld(injectJavaScript)
+            do {
+                let jsonRep = try JSONSerialization.data(withJSONObject: dict, options: [])
+                let injectJavaScript = "window.__firefox__.logins.inject(\(jsonRep.utf8EncodedString!)"
+                self.tab?.webView?.evaluateJavascriptInDefaultContentWorld(injectJavaScript)
+            } catch {
+                log.error("Failed to encode logins JSON: \(error)")
+            }
         }
     }
 }

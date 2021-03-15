@@ -18,20 +18,21 @@ class LibraryViewController: UIViewController {
 
     weak var delegate: LibraryPanelDelegate?
 
-    fileprivate lazy var buttonContainerView: UIStackView = {
-        let stackView = UIStackView()
-        stackView.axis = .horizontal
-        stackView.alignment = .fill
-        stackView.distribution = .fillEqually
-        stackView.spacing = 0
-        stackView.clipsToBounds = true
-        stackView.accessibilityNavigationStyle = .combined
-        stackView.accessibilityLabel = .LibraryPanelChooserAccessibilityLabel
-        return stackView
+    fileprivate lazy var navigationMenu: UISegmentedControl = {
+        let navigationMenu = UISegmentedControl()
+        navigationMenu.accessibilityLabel = .LibraryPanelChooserAccessibilityLabel
+        navigationMenu.addTarget(self, action: #selector(panelChanged), for: .valueChanged)
+        return navigationMenu
+    }()
+
+    lazy var navigationToolbar: UIToolbar = {
+        let toolbar = UIToolbar()
+        toolbar.delegate = self
+        toolbar.setItems([UIBarButtonItem(customView: navigationMenu)], animated: false)
+        return toolbar
     }()
 
     fileprivate var controllerContainerView = UIView()
-    fileprivate var buttons: [LibraryPanelButton] = []
 
     fileprivate var buttonTintColor: UIColor?
     fileprivate var buttonSelectedTintColor: UIColor?
@@ -48,29 +49,40 @@ class LibraryViewController: UIViewController {
         fatalError("init(coder:) has not been implemented")
     }
 
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor.theme.browser.background
-        self.edgesForExtendedLayout = []
+        if let window = (UIApplication.shared.delegate?.window)! as UIWindow? {
+            window.backgroundColor = .black
+        }
 
-        view.addSubview(buttonContainerView)
+        view.addSubview(navigationToolbar)
         view.addSubview(controllerContainerView)
-
-        buttonContainerView.snp.makeConstraints { make in
-            make.bottom.equalTo(self.view.safeArea.bottom)
-            make.leading.trailing.equalTo(self.view).inset(14)
-            make.height.equalTo(LibraryViewControllerUX.ButtonContainerHeight)
+        
+        navigationController?.navigationBar.shadowImage = UIImage()
+        if #available(iOS 13.0, *) { } else {
+            navigationItem.leftBarButtonItem = UIBarButtonItem(title: Strings.CloseButtonTitle, style: .done, target: self, action: #selector(dismissVC))
+        }
+        
+        navigationToolbar.snp.makeConstraints { make in
+            make.left.right.equalTo(view)
+            make.top.equalTo(view.safeArea.top)
         }
 
         controllerContainerView.snp.makeConstraints { make in
-            make.leading.trailing.top.equalTo(self.view)
-            make.bottom.equalTo(buttonContainerView.snp.top)
+            make.leading.trailing.equalTo(view.safeAreaLayoutGuide)
+            make.bottom.equalTo(view)
+            make.top.equalTo(navigationToolbar.snp.bottom)
         }
 
-        updateButtons()
+        updateSegments()
         applyTheme()
         if selectedPanel == nil {
             selectedPanel = .bookmarks
+            navigationMenu.selectedSegmentIndex = 0
         }
     }
 
@@ -81,31 +93,19 @@ class LibraryViewController: UIViewController {
                 return
             }
 
-            if let index = oldValue?.rawValue {
-                if index < buttons.count {
-                    let currentButton = buttons[index]
-                    currentButton.isSelected = false
-                }
-            }
-
-            hideCurrentPanel()
+            navigationController?.popToRootViewController(animated: true)
 
             if let index = selectedPanel?.rawValue {
-                if index < buttons.count {
-                    let newButton = buttons[index]
-                    newButton.isSelected = true
-                }
-
                 if index < panelDescriptors.count {
                     panelDescriptors[index].setup()
-                    if let panel = self.panelDescriptors[index].viewController, let navigationController = self.panelDescriptors[index].navigationController {
+                    if let panel = self.panelDescriptors[index].viewController {
                         let accessibilityLabel = self.panelDescriptors[index].accessibilityLabel
                         setupLibraryPanel(panel, accessibilityLabel: accessibilityLabel)
-                        self.showPanel(navigationController)
+                        self.navigationItem.title = accessibilityLabel
+                        self.showPanel(panel)
                     }
                 }
             }
-            self.updateButtonTints()
         }
     }
 
@@ -114,10 +114,7 @@ class LibraryViewController: UIViewController {
         panel.view.accessibilityNavigationStyle = .combined
         panel.view.accessibilityLabel = accessibilityLabel
         panel.title = accessibilityLabel
-    }
-
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        return ThemeManager.instance.currentName == .dark ? .lightContent : .default
+        panel.navigationItem.title = accessibilityLabel
     }
 
     fileprivate func hideCurrentPanel() {
@@ -141,59 +138,28 @@ class LibraryViewController: UIViewController {
         panel.didMove(toParent: self)
     }
 
-    @objc func tappedButton(_ sender: UIButton!) {
-        for (index, button) in buttons.enumerated() where button == sender {
-            let newSelectedPanel = LibraryPanelType(rawValue: index)
+    @objc func panelChanged() {
+        let index = navigationMenu.selectedSegmentIndex
+        let newSelectedPanel = LibraryPanelType(rawValue: index)
 
-            // If we're already on the selected panel and the user has
-            // tapped for a second time, pop it to the root view controller.
-            if newSelectedPanel == selectedPanel {
-                let panel = self.panelDescriptors[safe: index]?.navigationController
-                panel?.popToRootViewController(animated: true)
-            }
+        // If we're already on the selected panel and the user has
+        // tapped for a second time, pop it to the root view controller.
+        if newSelectedPanel == selectedPanel {
+            let panel = self.panelDescriptors[safe: index]?.navigationController
+            panel?.popToRootViewController(animated: true)
+        }
 
-            selectedPanel = newSelectedPanel
-            if selectedPanel == .bookmarks {
-                TelemetryWrapper.recordEvent(category: .action, method: .view, object: .bookmarksPanel, value: .homePanelTabButton)
-            } else if selectedPanel == .downloads {
-                TelemetryWrapper.recordEvent(category: .action, method: .view, object: .downloadsPanel, value: .homePanelTabButton)
-            }
-            break
+        selectedPanel = newSelectedPanel
+        if selectedPanel == .bookmarks {
+            TelemetryWrapper.recordEvent(category: .action, method: .view, object: .bookmarksPanel, value: .homePanelTabButton)
+        } else if selectedPanel == .downloads {
+            TelemetryWrapper.recordEvent(category: .action, method: .view, object: .downloadsPanel, value: .homePanelTabButton)
         }
     }
 
-    fileprivate func updateButtons() {
+    fileprivate func updateSegments() {
         for panel in panelDescriptors {
-            let button = LibraryPanelButton()
-            button.addTarget(self, action: #selector(tappedButton), for: .touchUpInside)
-            if let image = UIImage.templateImageNamed(panel.imageName) {
-                button.setImage(image, for: .normal)
-            }
-
-            button.nameLabel.text = panel.accessibilityLabel
-            button.accessibilityLabel = panel.accessibilityLabel
-            button.accessibilityIdentifier = panel.accessibilityIdentifier
-            buttons.append(button)
-            self.buttonContainerView.addArrangedSubview(button)
-        }
-    }
-
-    func updateButtonTints() {
-        for (index, button) in self.buttons.enumerated() {
-            let image: String
-            if index == self.selectedPanel?.rawValue {
-                button.tintColor = self.buttonSelectedTintColor
-                button.nameLabel.textColor = self.buttonSelectedTintColor
-                image = panelDescriptors[index].activeImageName
-            } else {
-                button.tintColor = self.buttonTintColor
-                button.nameLabel.textColor = self.buttonTintColor
-                image = panelDescriptors[index].imageName
-            }
-
-            if let image = UIImage.templateImageNamed(image) {
-                button.setImage(image, for: .normal)
-            }
+            navigationMenu.insertSegment(with: UIImage.templateImageNamed(panel.imageName), at: navigationMenu.numberOfSegments, animated: false)
         }
     }
 }
@@ -204,10 +170,28 @@ extension LibraryViewController: Themeable {
         panelDescriptors.forEach { item in
             (item.viewController as? Themeable)?.applyTheme()
         }
-        buttonContainerView.backgroundColor = UIColor.theme.homePanel.toolbarBackground
-        view.backgroundColor = UIColor.theme.homePanel.toolbarBackground
-        buttonTintColor = UIColor.theme.homePanel.toolbarTint
-        buttonSelectedTintColor = UIColor.theme.homePanel.toolbarHighlight
-        updateButtonTints()
+        if #available(iOS 13.0, *) {
+            overrideUserInterfaceStyle = ThemeManager.instance.userInterfaceStyle
+            view.backgroundColor = UIColor.systemGroupedBackground
+            navigationController?.navigationBar.tintColor = UIColor.label
+            navigationController?.toolbar.tintColor = UIColor.label
+            navigationItem.rightBarButtonItem?.tintColor = UIColor.label
+        } else {
+            view.backgroundColor = UIColor.theme.homePanel.toolbarBackground
+            navigationController?.navigationBar.barTintColor = UIColor.theme.tabTray.toolbar
+            navigationController?.navigationBar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
+            navigationController?.toolbar.barTintColor = UIColor.theme.tabTray.toolbar
+            navigationController?.toolbar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
+            navigationItem.rightBarButtonItem?.tintColor = UIColor.theme.tabTray.toolbarButtonTint
+            navigationToolbar.barTintColor = UIColor.theme.tabTray.toolbar
+            navigationToolbar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
+        }
+        setNeedsStatusBarAppearanceUpdate()
+    }
+}
+
+extension LibraryViewController: UIToolbarDelegate {
+    func position(for bar: UIBarPositioning) -> UIBarPosition {
+        return .topAttached
     }
 }

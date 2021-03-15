@@ -60,12 +60,12 @@ public class RustPlaces {
         return nil
     }
 
-    private func withWriter<T>(_ callback: @escaping(_ connection: PlacesWriteConnection) throws -> T) -> Deferred<Maybe<T>> {
-        let deferred = Deferred<Maybe<T>>()
+    private func withWriter<T>(_ callback: @escaping(_ connection: PlacesWriteConnection) throws -> T) -> Deferred<Result<T,PlacesError>> {
+        let deferred = Deferred<Result<T, PlacesError>>()
 
         writerQueue.async {
             guard self.isOpen else {
-                deferred.fill(Maybe(failure: PlacesError.connUseAfterAPIClosed as MaybeErrorType))
+                deferred.fill(Result.failure(PlacesError.connUseAfterAPIClosed))
                 return
             }
 
@@ -76,24 +76,24 @@ public class RustPlaces {
             if let writer = self.writer {
                 do {
                     let result = try callback(writer)
-                    deferred.fill(Maybe(success: result))
+                    deferred.fill(Result.success(result))
                 } catch let error {
-                    deferred.fill(Maybe(failure: error as MaybeErrorType))
+                    deferred.fill(Result.failure(error as! PlacesError))
                 }
             } else {
-                deferred.fill(Maybe(failure: PlacesError.connUseAfterAPIClosed as MaybeErrorType))
+                deferred.fill(Result.failure(PlacesError.connUseAfterAPIClosed))
             }
         }
 
         return deferred
     }
 
-    private func withReader<T>(_ callback: @escaping(_ connection: PlacesReadConnection) throws -> T) -> Deferred<Maybe<T>> {
-        let deferred = Deferred<Maybe<T>>()
+    private func withReader<T>(_ callback: @escaping(_ connection: PlacesReadConnection) throws -> T) -> Deferred<Result<T, PlacesError>> {
+        let deferred = Deferred<Result<T, PlacesError>>()
 
         readerQueue.async {
             guard self.isOpen else {
-                deferred.fill(Maybe(failure: PlacesError.connUseAfterAPIClosed as MaybeErrorType))
+                deferred.fill(Result.failure(PlacesError.connUseAfterAPIClosed))
                 return
             }
 
@@ -101,19 +101,19 @@ public class RustPlaces {
                 do {
                     self.reader = try self.api?.openReader()
                 } catch let error {
-                    deferred.fill(Maybe(failure: error as MaybeErrorType))
+                    deferred.fill(Result.failure(error as! PlacesError))
                 }
             }
 
             if let reader = self.reader {
                 do {
                     let result = try callback(reader)
-                    deferred.fill(Maybe(success: result))
+                    deferred.fill(Result.success(result))
                 } catch let error {
-                    deferred.fill(Maybe(failure: error as MaybeErrorType))
+                    deferred.fill(Result.failure(error as! PlacesError))
                 }
             } else {
-                deferred.fill(Maybe(failure: PlacesError.connUseAfterAPIClosed as MaybeErrorType))
+                deferred.fill(Result.failure(PlacesError.connUseAfterAPIClosed))
             }
         }
 
@@ -149,31 +149,31 @@ public class RustPlaces {
         }
     }
 
-    public func getBookmarksTree(rootGUID: GUID, recursive: Bool) -> Deferred<Maybe<BookmarkNode?>> {
+    public func getBookmarksTree(rootGUID: GUID, recursive: Bool) -> Deferred<Result<BookmarkNode?, PlacesError>> {
         return withReader { connection in
             return try connection.getBookmarksTree(rootGUID: rootGUID, recursive: recursive)
         }
     }
 
-    public func getBookmark(guid: GUID) -> Deferred<Maybe<BookmarkNode?>> {
+    public func getBookmark(guid: GUID) -> Deferred<Result<BookmarkNode?, PlacesError>> {
         return withReader { connection in
             return try connection.getBookmark(guid: guid)
         }
     }
 
-    public func getRecentBookmarks(limit: UInt) -> Deferred<Maybe<[BookmarkItem]>> {
+    public func getRecentBookmarks(limit: UInt) -> Deferred<Result<[BookmarkItem], PlacesError>> {
         return withReader { connection in
             return try connection.getRecentBookmarks(limit: limit)
         }
     }
 
-    public func getBookmarkURLForKeyword(keyword: String) -> Deferred<Maybe<String?>> {
+    public func getBookmarkURLForKeyword(keyword: String) -> Deferred<Result<String?, PlacesError>> {
         return withReader { connection in
             return try connection.getBookmarkURLForKeyword(keyword: keyword)
         }
     }
 
-    public func getBookmarksWithURL(url: String) -> Deferred<Maybe<[BookmarkItem]>> {
+    public func getBookmarksWithURL(url: String) -> Deferred<Result<[BookmarkItem], PlacesError>> {
         return withReader { connection in
             return try connection.getBookmarksWithURL(url: url)
         }
@@ -181,7 +181,7 @@ public class RustPlaces {
 
     public func isBookmarked(url: String) -> Deferred<Maybe<Bool>> {
         return getBookmarksWithURL(url: url).bind { result in
-            guard let bookmarks = result.successValue else {
+            guard case let .success(bookmarks) = result else {
                 return deferMaybe(false)
             }
 
@@ -189,7 +189,7 @@ public class RustPlaces {
         }
     }
 
-    public func searchBookmarks(query: String, limit: UInt) -> Deferred<Maybe<[BookmarkItem]>> {
+    public func searchBookmarks(query: String, limit: UInt) -> Deferred<Result<[BookmarkItem], PlacesError>> {
         return withReader { connection in
             return try connection.searchBookmarks(query: query, limit: limit)
         }
@@ -209,7 +209,7 @@ public class RustPlaces {
         }
     }
 
-    public func deleteBookmarkNode(guid: GUID) -> Success {
+    public func deleteBookmarkNode(guid: GUID) -> Deferred<Result<(), PlacesError>> {
         return withWriter { connection in
             let result = try connection.deleteBookmarkNode(guid: guid)
             if !result {
@@ -218,39 +218,39 @@ public class RustPlaces {
         }
     }
 
-    public func deleteBookmarksWithURL(url: String) -> Success {
+    public func deleteBookmarksWithURL(url: String) -> Deferred<Result<(), PlacesError>> {
         return getBookmarksWithURL(url: url) >>== { bookmarks in
             let deferreds = bookmarks.map({ self.deleteBookmarkNode(guid: $0.guid) })
             return all(deferreds).bind { results in
-                if let error = results.find({ $0.isFailure })?.failureValue {
-                    return deferMaybe(error)
+                if case let .failure(error) = results.find({ $0.isFailure }) {
+                    return Deferred(value: Result.failure(error))
                 }
 
-                return succeed()
+                return Deferred(value: Result.success(()))
             }
         }
     }
 
-    public func createFolder(parentGUID: GUID, title: String, position: UInt32? = nil) -> Deferred<Maybe<GUID>> {
+    public func createFolder(parentGUID: GUID, title: String, position: UInt32? = nil) -> Deferred<Result<GUID, PlacesError>> {
         return withWriter { connection in
             return try connection.createFolder(parentGUID: parentGUID, title: title, position: position)
         }
     }
 
-    public func createSeparator(parentGUID: GUID, position: UInt32? = nil) -> Deferred<Maybe<GUID>> {
+    public func createSeparator(parentGUID: GUID, position: UInt32? = nil) -> Deferred<Result<GUID, PlacesError>> {
         return withWriter { connection in
             return try connection.createSeparator(parentGUID: parentGUID, position: position)
         }
     }
 
     @discardableResult
-    public func createBookmark(parentGUID: GUID, url: String, title: String?, position: UInt32? = nil) -> Deferred<Maybe<GUID>> {
+    public func createBookmark(parentGUID: GUID, url: String, title: String?, position: UInt32? = nil) -> Deferred<Result<GUID, PlacesError>> {
         return withWriter { connection in
             return try connection.createBookmark(parentGUID: parentGUID, url: url, title: title, position: position)
         }
     }
 
-    public func updateBookmarkNode(guid: GUID, parentGUID: GUID? = nil, position: UInt32? = nil, title: String? = nil, url: String? = nil) -> Success {
+    public func updateBookmarkNode(guid: GUID, parentGUID: GUID? = nil, position: UInt32? = nil, title: String? = nil, url: String? = nil) -> Deferred<Result<(), PlacesError>> {
         return withWriter { connection in
             return try connection.updateBookmarkNode(guid: guid, parentGUID: parentGUID, position: position, title: title, url: url)
         }

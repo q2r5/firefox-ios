@@ -114,11 +114,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIViewControllerRestorati
 
         let imageStore = DiskImageStore(files: profile.files, namespace: "TabManagerScreenshots", quality: UIConstants.ScreenshotQuality)
 
-        // Temporary fix for Bug 1390871 - NSInvalidArgumentException: -[WKContentView menuHelperFindInPage]: unrecognized selector
-        if let clazz = NSClassFromString("WKCont" + "ent" + "View"), let swizzledMethod = class_getInstanceMethod(TabWebViewMenuHelper.self, #selector(TabWebViewMenuHelper.swizzledMenuHelperFindInPage)) {
-            class_addMethod(clazz, MenuHelper.SelectorFindInPage, method_getImplementation(swizzledMethod), method_getTypeEncoding(swizzledMethod))
-        }
-
         self.tabManager = TabManager(profile: profile, imageStore: imageStore)
         self.tabTrayController = TabTrayControllerV1(tabManager: self.tabManager, profile: profile)
 
@@ -194,8 +189,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIViewControllerRestorati
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         var shouldPerformAdditionalDelegateHandling = true
-
-        UIScrollView.doBadSwizzleStuff()
 
         window!.makeKeyAndVisible()
 
@@ -555,14 +548,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UIViewControllerRestorati
             // Check for fxa sign-in code and launch the login screen directly
             if query["signin"] != nil {
                 // bvc.launchFxAFromDeeplinkURL(url) // Was using Adjust. Consider hooking up again when replacement system in-place.
-                return true
-            }
-
-            // Per Adjust documenation, https://docs.adjust.com/en/universal-links/#running-campaigns-through-universal-links,
-            // it is recommended that links contain the `deep_link` query parameter. This link will also
-            // be url encoded.
-            if let deepLink = query["deep_link"]?.removingPercentEncoding, let url = URL(string: deepLink) {
-                bvc.switchToTabForURLOrOpen(url)
                 return true
             }
 

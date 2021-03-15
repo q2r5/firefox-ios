@@ -196,7 +196,7 @@ class SiteTableViewController: UIViewController, UITableViewDelegate, UITableVie
         navigationController?.navigationBar.titleTextAttributes = [NSAttributedString.Key.foregroundColor: UIColor.theme.tableView.headerTextDark]
         setNeedsStatusBarAppearanceUpdate()
 
-        tableView.backgroundColor = UIColor.theme.tableView.rowBackground
+        tableView.backgroundColor = UIColor.theme.tableView.headerBackground
         tableView.separatorColor = UIColor.theme.tableView.separator
         if let rows = tableView.indexPathsForVisibleRows {
             tableView.reloadRows(at: rows, with: .none)

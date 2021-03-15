@@ -209,9 +209,9 @@ private class TwoLineCellHelper {
 
     func applyTheme() {
         if let headerView = self.container as? UITableViewHeaderFooterView {
-            headerView.contentView.backgroundColor = UIColor.clear
+            headerView.contentView.backgroundColor = UIColor.theme.tableView.headerBackground
         } else {
-            self.container?.backgroundColor = UIColor.clear
+            self.container?.backgroundColor = UIColor.theme.tableView.rowBackground
         }
 
         textLabel.textColor = UIColor.theme.tableView.rowText

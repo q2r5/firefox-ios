@@ -16,17 +16,26 @@ class SendToDevice: DevicePickerViewControllerDelegate, InstructionsViewControll
             instructionsViewController.delegate = self
             return instructionsViewController
         }
-        let devicePickerViewController = DevicePickerViewController()
+        var devicePickerViewController: DevicePicker
+        if #available(iOS 14.0, *) {
+            devicePickerViewController = NewDevicePickerViewController()
+        } else {
+            devicePickerViewController = DevicePickerViewController()
+        }
         devicePickerViewController.pickerDelegate = self
         devicePickerViewController.profile = nil // This means the picker will open and close the default profile
         return devicePickerViewController
+    }
+
+    func instructionsViewDidRequestToSignIn() {
+
     }
 
     func finish() {
         delegate?.finish(afterDelay: 0)
     }
 
-    func devicePickerViewController(_ devicePickerViewController: DevicePickerViewController, didPickDevices devices: [RemoteDevice]) {
+    func devicePickerViewController(_ devicePickerViewController: DevicePicker, didPickDevices devices: [RemoteDevice]) {
         guard let item = sharedItem else {
             return finish()
         }
@@ -40,7 +49,7 @@ class SendToDevice: DevicePickerViewControllerDelegate, InstructionsViewControll
         }
     }
 
-    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePickerViewController) {
+    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePicker) {
         finish()
     }
 

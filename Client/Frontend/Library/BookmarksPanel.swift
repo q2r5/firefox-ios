@@ -91,49 +91,91 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
             self.disableEditMode()
         }
 
-        self.newBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add) { _ in
-            let newBookmark = PhotonActionSheetItem(title: Strings.BookmarksNewBookmark, iconString: "action_bookmark", handler: { _, _ in
-                guard let bookmarkFolder = self.bookmarkFolder else {
-                    return
-                }
+        if #available(iOS 14.0, *) {
+            let addMenuItems: [UIMenuElement] = [
+                UIAction(title: Strings.BookmarksNewBookmark) { _ in
+                    guard let bookmarkFolder = self.bookmarkFolder else {
+                        return
+                    }
 
-                let detailController = BookmarkDetailPanel(profile: self.profile, withNewBookmarkNodeType: .bookmark, parentBookmarkFolder: bookmarkFolder)
-                self.navigationController?.pushViewController(detailController, animated: true)
-            })
+                    let detailController = BookmarkDetailPanel(profile: self.profile, withNewBookmarkNodeType: .bookmark, parentBookmarkFolder: bookmarkFolder)
+                    self.navigationController?.pushViewController(detailController, animated: true)
+                },
 
-            let newFolder = PhotonActionSheetItem(title: Strings.BookmarksNewFolder, iconString: "bookmarkFolder", handler: { _, _ in
-                guard let bookmarkFolder = self.bookmarkFolder else {
-                    return
-                }
+                UIAction(title: Strings.BookmarksNewFolder) { _ in
+                    guard let bookmarkFolder = self.bookmarkFolder else {
+                        return
+                    }
 
-                let detailController = BookmarkDetailPanel(profile: self.profile, withNewBookmarkNodeType: .folder, parentBookmarkFolder: bookmarkFolder)
-                self.navigationController?.pushViewController(detailController, animated: true)
-            })
+                    let detailController = BookmarkDetailPanel(profile: self.profile, withNewBookmarkNodeType: .folder, parentBookmarkFolder: bookmarkFolder)
+                    self.navigationController?.pushViewController(detailController, animated: true)
+                },
+                UIAction(title: Strings.BookmarksNewSeparator) { _ in
+                    let centerVisibleRow = self.centerVisibleRow()
 
-            let newSeparator = PhotonActionSheetItem(title: Strings.BookmarksNewSeparator, iconString: "nav-menu", handler: { _, _ in
-                let centerVisibleRow = self.centerVisibleRow()
+                    self.profile.places.createSeparator(parentGUID: self.bookmarkFolderGUID, position: UInt32(centerVisibleRow)) >>== { guid in
+                        self.profile.places.getBookmark(guid: guid).uponQueue(.main) { result in
+                            guard case let .success(bookmarkNode) = result, let bookmarkSeparator = bookmarkNode as? BookmarkSeparator else {
+                                return
+                            }
 
-                self.profile.places.createSeparator(parentGUID: self.bookmarkFolderGUID, position: UInt32(centerVisibleRow)) >>== { guid in
-                    self.profile.places.getBookmark(guid: guid).uponQueue(.main) { result in
-                        guard let bookmarkNode = result.successValue, let bookmarkSeparator = bookmarkNode as? BookmarkSeparator else {
-                            return
+                            let indexPath = IndexPath(row: centerVisibleRow, section: BookmarksSection.bookmarks.rawValue)
+                            self.tableView.beginUpdates()
+                            self.bookmarkNodes.insert(bookmarkSeparator, at: centerVisibleRow)
+                            self.tableView.insertRows(at: [indexPath], with: .automatic)
+                            self.tableView.endUpdates()
+
+                            self.flashRow(at: indexPath)
                         }
-
-                        let indexPath = IndexPath(row: centerVisibleRow, section: BookmarksSection.bookmarks.rawValue)
-                        self.tableView.beginUpdates()
-                        self.bookmarkNodes.insert(bookmarkSeparator, at: centerVisibleRow)
-                        self.tableView.insertRows(at: [indexPath], with: .automatic)
-                        self.tableView.endUpdates()
-
-                        self.flashRow(at: indexPath)
                     }
                 }
-            })
+            ]
+            self.newBarButtonItem = UIBarButtonItem(systemItem: .add, menu: UIMenu(children: addMenuItems))
+        } else {
+            self.newBarButtonItem = UIBarButtonItem(barButtonSystemItem: .add) { _ in
+                let newBookmark = PhotonActionSheetItem(title: Strings.BookmarksNewBookmark, iconString: "action_bookmark", handler: { _, _ in
+                    guard let bookmarkFolder = self.bookmarkFolder else {
+                        return
+                    }
 
-            let sheet = PhotonActionSheet(actions: [[newBookmark, newFolder, newSeparator]])
-            sheet.modalPresentationStyle = .overFullScreen
-            sheet.modalTransitionStyle = .crossDissolve
-            self.present(sheet, animated: true)
+                    let detailController = BookmarkDetailPanel(profile: self.profile, withNewBookmarkNodeType: .bookmark, parentBookmarkFolder: bookmarkFolder)
+                    self.navigationController?.pushViewController(detailController, animated: true)
+                })
+
+                let newFolder = PhotonActionSheetItem(title: Strings.BookmarksNewFolder, iconString: "bookmarkFolder", handler: { _, _ in
+                    guard let bookmarkFolder = self.bookmarkFolder else {
+                        return
+                    }
+
+                    let detailController = BookmarkDetailPanel(profile: self.profile, withNewBookmarkNodeType: .folder, parentBookmarkFolder: bookmarkFolder)
+                    self.navigationController?.pushViewController(detailController, animated: true)
+                })
+
+                let newSeparator = PhotonActionSheetItem(title: Strings.BookmarksNewSeparator, iconString: "nav-menu", handler: { _, _ in
+                    let centerVisibleRow = self.centerVisibleRow()
+
+                    self.profile.places.createSeparator(parentGUID: self.bookmarkFolderGUID, position: UInt32(centerVisibleRow)) >>== { guid in
+                        self.profile.places.getBookmark(guid: guid).uponQueue(.main) { result in
+                            guard let bookmarkNode = result.successValue, let bookmarkSeparator = bookmarkNode as? BookmarkSeparator else {
+                                return
+                            }
+
+                            let indexPath = IndexPath(row: centerVisibleRow, section: BookmarksSection.bookmarks.rawValue)
+                            self.tableView.beginUpdates()
+                            self.bookmarkNodes.insert(bookmarkSeparator, at: centerVisibleRow)
+                            self.tableView.insertRows(at: [indexPath], with: .automatic)
+                            self.tableView.endUpdates()
+
+                            self.flashRow(at: indexPath)
+                        }
+                    }
+                })
+
+                let sheet = PhotonActionSheet(actions: [[newBookmark, newFolder, newSeparator]])
+                sheet.modalPresentationStyle = .overFullScreen
+                sheet.modalTransitionStyle = .crossDissolve
+                self.present(sheet, animated: true)
+            }
         }
 
         if bookmarkFolderGUID != BookmarkRoots.RootGUID {
@@ -291,6 +333,27 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
 
     func didAddBookmarkNode() {
         flashLastRowOnNextReload = true
+    }
+    
+    fileprivate func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        guard let site = getSiteDetails(for: indexPath),
+              let siteURL = URL(string: site.url) else { return nil }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: { _ in
+            let openInNewTabAction = UIAction(title: Strings.OpenInNewTabContextMenuTitle) { _ in
+                self.libraryPanelDelegate?.libraryPanelDidRequestToOpenInNewTab(siteURL, isPrivate: false)
+            }
+
+            let openInNewPrivateTabAction = UIAction(title: Strings.OpenInNewPrivateTabContextMenuTitle) { _ in
+                self.libraryPanelDelegate?.libraryPanelDidRequestToOpenInNewTab(siteURL, isPrivate: true)
+            }
+            
+            let deleteBookmarkAction = UIAction(title: Strings.BookmarksPanelDeleteTableAction, attributes: .destructive) { _ in
+                self.deleteBookmarkNodeAtIndexPath(indexPath)
+                TelemetryWrapper.recordEvent(category: .action, method: .delete, object: .bookmark, value: .bookmarksPanel, extras: ["gesture": "swipe"])
+            }
+            return UIMenu(children: [openInNewTabAction, openInNewPrivateTabAction, deleteBookmarkAction])
+        })
     }
 
     @objc fileprivate func didLongPressTableView(_ longPressGestureRecognizer: UILongPressGestureRecognizer) {
@@ -493,13 +556,13 @@ class BookmarksPanel: SiteTableViewController, LibraryPanel {
         return .delete
     }
 
-    func tableView(_ tableView: UITableView, editActionsForRowAt indexPath: IndexPath) -> [UITableViewRowAction]? {
-        let delete = UITableViewRowAction(style: .default, title: Strings.BookmarksPanelDeleteTableAction, handler: { (action, indexPath) in
+    func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let delete = UIContextualAction(style: .destructive, title: Strings.BookmarksPanelDeleteTableAction, handler: { (_, _, _) in
             self.deleteBookmarkNodeAtIndexPath(indexPath)
             TelemetryWrapper.recordEvent(category: .action, method: .delete, object: .bookmark, value: .bookmarksPanel, extras: ["gesture": "swipe"])
         })
 
-        return [delete]
+        return UISwipeActionsConfiguration(actions: [delete])
     }
 }
 
@@ -529,7 +592,7 @@ extension BookmarksPanel: LibraryPanelContextMenu {
         }
 
         let pinTopSite = PhotonActionSheetItem(title: Strings.PinTopsiteActionTitle, iconString: "action_pin", handler: { _, _ in
-            _ = self.profile.history.addPinnedTopSite(site).uponQueue(.main) { result in
+            self.profile.history.addPinnedTopSite(site).uponQueue(.main) { result in
                 if result.isSuccess {
                     SimpleToast().showAlertWithText(Strings.AppMenuAddPinToTopSitesConfirmMessage, bottomContainer: self.view)
                 }

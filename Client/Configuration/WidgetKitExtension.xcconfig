@@ -1,0 +1,17 @@
+#include "Extension.xcconfig"
+
+PRODUCT_BUNDLE_IDENTIFIER=com.q2r5.$(CONFIGURATION).NewToday
+
+CODE_SIGN_ENTITLEMENTS = Extensions/Entitlements/$(CONFIGURATION).entitlements
+
+PROVISIONING_PROFILE_SPECIFIER[config=Firefox][sdk=*][arch=*] = BR $(CONFIGURATION) WidgetKit App Store
+PROVISIONING_PROFILE_SPECIFIER[config=FirefoxBeta][sdk=*][arch=*] = BR $(CONFIGURATION) WidgetKit
+PROVISIONING_PROFILE_SPECIFIER[config=Fennec][sdk=*][arch=*] = Fennec New Today
+PROVISIONING_PROFILE_SPECIFIER[config=FennecEnterprise][sdk=*][arch=*] =
+
+INFOPLIST_FILE = WidgetKit/Info.plist
+
+IPHONEOS_DEPLOYMENT_TARGET = 14.5
+
+ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = backgroundColor;

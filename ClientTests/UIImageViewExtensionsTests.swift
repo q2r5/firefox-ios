@@ -37,7 +37,7 @@ class UIImageViewExtensionsTests: XCTestCase {
     func testAsyncSetIcon() {
         let originalImage = UIImage(named: "bookmark")!
 
-        WebServer.sharedInstance.registerHandlerForMethod("GET", module: "favicon", resource: "icon") { (request) -> GCDWebServerResponse in
+        WebServer.sharedInstance.registerHandlerForMethod("GET", module: "favicon", resource: "icon") { (request) -> GCDWebServerResponse? in
             return GCDWebServerDataResponse(data: originalImage.pngData()!, contentType: "image/png")
         }
 

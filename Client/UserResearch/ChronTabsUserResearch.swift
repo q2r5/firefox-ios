@@ -8,7 +8,7 @@ import Shared
 
 class ChronTabsUserResearch {
     // Variable
-    var lpVariable: LPVar?
+    var lpVariable: Var?
     // Constants
     private let enrollmentKey = "chronTabsUserResearchEnrollmentKey"
     private let chronTabsUserResearchKey = "chronTabsUserResearchKey"
@@ -46,7 +46,7 @@ class ChronTabsUserResearch {
     }
     
     // MARK: Initializer
-    init(lpVariable: LPVar? = LPVariables.chronTabsABTest) {
+    init(lpVariable: Var? = LPVariables.chronTabsABTest) {
         self.lpVariable = lpVariable
     }
     
@@ -66,7 +66,7 @@ class ChronTabsUserResearch {
             }
             self.fetchedExperimentVariables = true
             
-            let lpValue = LPVariables.chronTabsABTest?.boolValue() ?? false
+            let lpValue = LPVariables.chronTabsABTest.boolValue()
             if self.chronTabsState != lpValue {
                 self.chronTabsState = lpValue
                 self.updateTelemetry()
@@ -80,8 +80,8 @@ class ChronTabsUserResearch {
             // Condition: Leanplum server too slow; Set default New tab state
             self.chronTabsState = false
             // Condition: LP has already started but we missed onStartLPVariable callback
-            if case .started(startedState: _) = LeanPlumClient.shared.lpState , let boolValue = LPVariables.chronTabsABTest?.boolValue() {
-                self.chronTabsState = boolValue
+            if case .started(startedState: _) = LeanPlumClient.shared.lpState {
+                self.chronTabsState = LPVariables.chronTabsABTest.boolValue()
                 self.updateTelemetry()
             }
             self.fetchedExperimentVariables = true
@@ -93,10 +93,7 @@ class ChronTabsUserResearch {
         // Printing variant is good to know all details of A/B test fields
         print("lp variant \(String(describing: Leanplum.variants()))")
         var lpData: Dictionary<String, Any>?
-        guard let variants = Leanplum.variants() as? [Dictionary<String, Any>] else {
-            return
-        }
-        variants.forEach {
+        Leanplum.variants().forEach {
             if $0["abTestName"] as? String == abTestName {
                 lpData = $0
             }

@@ -212,22 +212,16 @@ extension SQLiteHistory: Favicons {
                 return deferMaybe(FaviconLookupError(siteURL: site.url))
             }
 
-            UIGraphicsBeginImageContextWithOptions(image.size, false, image.scale)
-            defer { UIGraphicsEndImageContext() }
+            let format = UIGraphicsImageRendererFormat()
+            format.opaque = false
+            format.scale = image.scale
 
-            guard let context = UIGraphicsGetCurrentContext(),
-                let cgImage = image.cgImage else {
-                return deferMaybe(image)
-            }
-
-            let rect = CGRect(origin: .zero, size: image.size)
-            context.setFillColor(icon.color.cgColor)
-            context.fill(rect)
-            context.concatenate(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: rect.height))
-            context.draw(cgImage, in: rect)
-
-            guard let imageWithBackground = UIGraphicsGetImageFromCurrentImageContext() else {
-                return deferMaybe(image)
+            let imageWithBackground = UIGraphicsImageRenderer(size: image.size, format: format).image { ctx in
+                let rect = CGRect(origin: .zero, size: image.size)
+                icon.color.setFill()
+                ctx.fill(rect)
+                ctx.cgContext.concatenate(CGAffineTransform(a: 1, b: 0, c: 0, d: -1, tx: 0, ty: rect.height))
+                ctx.currentImage.draw(in: rect)
             }
 
             return deferMaybe(imageWithBackground)

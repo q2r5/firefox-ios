@@ -32,8 +32,8 @@ extension UIColor {
     }
 
     public convenience init(colorString: String) {
-        var colorInt: UInt32 = 0
-        Scanner(string: colorString).scanHexInt32(&colorInt)
+        var colorInt: UInt64 = 0
+        Scanner(string: colorString).scanHexInt64(&colorInt)
         self.init(rgb: (Int) (colorInt))
     }
 

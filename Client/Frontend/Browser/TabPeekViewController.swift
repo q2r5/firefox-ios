@@ -9,7 +9,9 @@ import WebKit
 
 protocol TabPeekDelegate: AnyObject {
     func tabPeekDidAddBookmark(_ tab: Tab)
+    func tabPeekDidRemoveBookmark(_ tab: Tab)
     @discardableResult func tabPeekDidAddToReadingList(_ tab: Tab) -> ReadingListItem?
+    func tabPeekDidRemoveFromReadingList(_ tab: Tab)
     func tabPeekRequestsPresentationOf(_ viewController: UIViewController)
     func tabPeekDidCloseTab(_ tab: Tab)
 }
@@ -18,9 +20,11 @@ class TabPeekViewController: UIViewController, WKNavigationDelegate {
     weak var tab: Tab?
 
     fileprivate weak var delegate: TabPeekDelegate?
+    fileprivate weak var profile: BrowserProfile?
     fileprivate var fxaDevicePicker: UINavigationController?
     fileprivate var isBookmarked: Bool = false
     fileprivate var isInReadingList: Bool = false
+    fileprivate var isPinnedTopSite: Bool = false
     fileprivate var hasRemoteClients: Bool = false
     fileprivate var ignoreURL: Bool = false
 
@@ -77,27 +81,118 @@ class TabPeekViewController: UIViewController, WKNavigationDelegate {
         let urlIsTooLongToSave = self.tab?.urlIsTooLong ?? false
         if !self.ignoreURL && !urlIsTooLongToSave {
             if !self.isBookmarked {
-                actions.append(UIAction(title: .TabPeekAddToBookmarks, image: UIImage.templateImageNamed("menu-Bookmark"), identifier: nil) { [weak self] _ in
+                actions.append(UIAction(title: .TabPeekAddToBookmarks, identifier: nil) { [weak self] _ in
                     guard let wself = self, let tab = wself.tab else { return }
                     wself.delegate?.tabPeekDidAddBookmark(tab)
                     })
             }
+            if !self.isInReadingList {
+                actions.append(UIAction(title: Strings.AppMenuAddToReadingListTitleString, identifier: nil) { [weak self] _ in
+                    guard let wself = self, let tab = wself.tab else { return }
+                    wself.delegate?.tabPeekDidAddToReadingList(tab)
+                })
+            }
             if self.hasRemoteClients {
-                actions.append(UIAction(title: Strings.SendToDeviceTitle, image: UIImage.templateImageNamed("menu-Send"), identifier: nil) { [weak self] _ in
+                actions.append(UIAction(title: Strings.SendToDeviceTitle, identifier: nil) { [weak self] _ in
                     guard let wself = self, let clientPicker = wself.fxaDevicePicker else { return }
                     wself.delegate?.tabPeekRequestsPresentationOf(clientPicker)
                     })
             }
-            actions.append(UIAction(title: .TabPeekCopyUrl, image: UIImage.templateImageNamed("menu-Copy-Link"), identifier: nil) {[weak self] _ in
+            actions.append(UIAction(title: .TabPeekCopyUrl, identifier: nil) {[weak self] _ in
                 guard let wself = self, let url = wself.tab?.canonicalURL else { return }
                 UIPasteboard.general.url = url
-                SimpleToast().showAlertWithText(Strings.AppMenuCopyURLConfirmMessage, bottomContainer: wself.view)
+                SimpleToast().showAlertWithText(Strings.AppMenuCopyURLConfirmMessage, bottomContainer: wself.presentingViewController?.view ?? wself.view)
             })
         }
-        actions.append(UIAction(title: .TabPeekCloseTab, image: UIImage.templateImageNamed("menu-CloseTabs"), identifier: nil) { [weak self] _ in
+        actions.append(UIAction(title: .TabPeekCloseTab, identifier: nil) { [weak self] _ in
             guard let wself = self, let tab = wself.tab else { return }
             wself.delegate?.tabPeekDidCloseTab(tab)
             })
+
+        return UIMenu(title: "", children: actions)
+    }
+    
+    @available(iOS 13, *)
+    func tabTrayActions(defaultActions: [UIMenuElement]) -> UIMenu {
+        var actions = [UIAction]()
+
+        let urlIsTooLongToSave = self.tab?.urlIsTooLong ?? false
+        if !self.ignoreURL && !urlIsTooLongToSave {
+            actions.append(UIAction(title: String.TabPeekCopyUrl, identifier: nil) {[weak self] _ in
+                guard let wself = self, let url = wself.tab?.canonicalURL else { return }
+                UIPasteboard.general.url = url
+                SimpleToast().showAlertWithText(Strings.AppMenuCopyURLConfirmMessage, bottomContainer: wself.presentingViewController?.view ?? wself.view)
+            })
+            actions.append(UIAction(title: Strings.ShareContextMenuTitle, identifier: nil) { [weak self] _ in
+                guard let wself = self, let url = wself.tab?.canonicalURL else { return }
+                let helper = ShareExtensionHelper(url: url, tab: wself.tab)
+
+                let controller = helper.createActivityViewController { _,_ in }
+
+                wself.delegate?.tabPeekRequestsPresentationOf(controller)
+                LeanPlumClient.shared.track(event: .userSharedWebpage)
+            })
+            if self.hasRemoteClients {
+                actions.append(UIAction(title: Strings.SendToDeviceTitle, identifier: nil) { [weak self] _ in
+                    guard let wself = self, let clientPicker = wself.fxaDevicePicker else { return }
+                    wself.delegate?.tabPeekRequestsPresentationOf(clientPicker)
+                })
+            }
+            if !self.isInReadingList {
+                actions.append(UIAction(title: Strings.AppMenuAddToReadingListTitleString, identifier: nil) { [weak self] _ in
+                    guard let wself = self, let tab = wself.tab else { return }
+                    wself.delegate?.tabPeekDidAddToReadingList(tab)
+                })
+            } else {
+                actions.append(UIAction(title: String.ReaderModeBarRemoveFromReadingList, identifier: nil) { [weak self] _ in
+                    guard let wself = self, let tab = wself.tab else { return }
+                    wself.delegate?.tabPeekDidAddToReadingList(tab)
+                })
+            }
+
+            if !self.isBookmarked {
+                actions.append(UIAction(title: String.TabPeekAddToBookmarks, identifier: nil) { [weak self] _ in
+                    guard let wself = self, let tab = wself.tab else { return }
+                    wself.delegate?.tabPeekDidAddBookmark(tab)
+                })
+            } else {
+                actions.append(UIAction(title: Strings.RemoveBookmarkContextMenuTitle, identifier: nil) { [weak self] _ in
+                    guard let wself = self, let tab = wself.tab else { return }
+                    wself.delegate?.tabPeekDidRemoveBookmark(tab)
+                })
+            }
+            if !self.isPinnedTopSite {
+                actions.append(UIAction(title: Strings.PinTopsiteActionTitle, identifier: nil) { [weak self] _ in
+                    guard let wself = self, let wprofile = wself.profile, let tab = wself.tab,
+                          let url = tab.url?.displayURL, let sql = wprofile.history as? SQLiteHistory else { return }
+
+                    sql.getSites(forURLs: [url.absoluteString]).bind { val -> Success in
+                        guard let site = val.successValue?.asArray().first?.flatMap({ $0 }) else {
+                            return succeed()
+                        }
+                        return wprofile.history.addPinnedTopSite(site)
+                    }.uponQueue(.main) { result in
+                    }
+                })
+            } else {
+                actions.append(UIAction(title: Strings.RemovePinTopsiteActionTitle, identifier: nil) { [weak self] _ in
+                    guard let wself = self, let wprofile = wself.profile, let tab = wself.tab,
+                          let url = tab.url?.displayURL, let sql = wprofile.history as? SQLiteHistory else { return }
+
+                    sql.getSites(forURLs: [url.absoluteString]).bind { val -> Success in
+                        guard let site = val.successValue?.asArray().first?.flatMap({ $0 }) else {
+                            return succeed()
+                        }
+                        return wprofile.history.removeFromPinnedTopSites(site)
+                    }.uponQueue(.main) { result in
+                    }
+                })
+            }
+        }
+        actions.append(UIAction(title: String.TabPeekCloseTab, identifier: nil, attributes: .destructive) { [weak self] _ in
+            guard let wself = self, let tab = wself.tab else { return }
+            wself.delegate?.tabPeekDidCloseTab(tab)
+        })
 
         return UIMenu(title: "", children: actions)
     }
@@ -171,6 +266,10 @@ class TabPeekViewController: UIViewController, WKNavigationDelegate {
 
         browserProfile.places.isBookmarked(url: displayURL) >>== { isBookmarked in
             self.isBookmarked = isBookmarked
+        }
+
+        TopSitesHandler.getTopSites(profile: browserProfile).uponQueue(.main) {
+            self.isPinnedTopSite = $0.contains(where: { $0.url == displayURL })
         }
 
         browserProfile.remoteClientsAndTabs.getClientGUIDs().uponQueue(.main) {

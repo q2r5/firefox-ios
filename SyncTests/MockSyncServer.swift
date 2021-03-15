@@ -308,7 +308,7 @@ class MockSyncServer {
         let storagePath = "\(basePath)/storage/"
 
         let infoCollectionsPath = "\(basePath)/info/collections"
-        server.addHandler(forMethod: "GET", path: infoCollectionsPath, request: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse in
+        server.addHandler(forMethod: "GET", path: infoCollectionsPath, request: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse? in
             var ic = [String: Any]()
             var lastModified: Timestamp = 0
             for collection in self.collections.keys {
@@ -332,7 +332,7 @@ class MockSyncServer {
             return GCDWebServerDataRequest(method: method, url: url, headers: headers, path: path, query: query)
         }
 
-        server.addHandler(match: matchPut) { (request) -> GCDWebServerResponse in
+        server.addHandler(match: matchPut) { (request) -> GCDWebServerResponse? in
             guard let request = request as? GCDWebServerDataRequest else {
                 return MockSyncServer.withHeaders(response: GCDWebServerDataResponse(statusCode: 400))
             }
@@ -358,7 +358,7 @@ class MockSyncServer {
             return GCDWebServerRequest(method: method, url: url, headers: headers, path: path, query: query)
         }
 
-        server.addHandler(match: matchDelete) { (request) -> GCDWebServerResponse in
+        server.addHandler(match: matchDelete) { (request) -> GCDWebServerResponse? in
             guard let spec = SyncDeleteRequestSpec.fromRequest(request: request) else {
                 return GCDWebServerDataResponse(statusCode: 400)
             }
@@ -403,7 +403,7 @@ class MockSyncServer {
             return GCDWebServerRequest(method: method, url: url, headers: headers, path: path, query: query)
         }
 
-        server.addHandler(match: match) { (request) -> GCDWebServerResponse in
+        server.addHandler(match: match) { (request) -> GCDWebServerResponse? in
             // 1. Decide what the URL is asking for. It might be a collection fetch or
             //    an individual record, and it might have query parameters.
 

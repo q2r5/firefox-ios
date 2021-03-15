@@ -118,6 +118,7 @@ class ShareViewController: UIViewController {
 
         if shareItem?.isUrlType() ?? true {
             makeActionRow(addTo: stackView, label: Strings.ShareOpenInFirefox, imageName: "open-in-firefox", action: #selector(actionOpenInFirefoxNow), hasNavigation: false)
+            makeActionRow(addTo: stackView, label: Strings.ShareOpenInPrivateModeNow, imageName: "openInPrivateMode", action: #selector(actionOpenInPrivate), hasNavigation: false)
             makeActionRow(addTo: stackView, label: Strings.ShareLoadInBackground, imageName: "menu-Show-Tabs", action: #selector(actionLoadInBackground), hasNavigation: false)
             makeActionRow(addTo: stackView, label: Strings.ShareBookmarkThisPage, imageName: "AddToBookmarks", action: #selector(actionBookmarkThisPage), hasNavigation: false)
             makeActionRow(addTo: stackView, label: Strings.ShareAddToReadingList, imageName: "AddToReadingList", action: #selector(actionAddToReadingList), hasNavigation: false)
@@ -379,7 +380,7 @@ extension ShareViewController {
         }
     }
 
-    func openFirefox(withUrl url: String, isSearch: Bool) {
+    func openFirefox(withUrl url: String, isSearch: Bool, isPrivate: Bool = false) {
         // Telemetry is handled in the app delegate that receives this event.
         let profile = BrowserProfile(localName: "profile")
         profile.prefs.setBool(true, forKey: PrefsKeys.AppExtensionTelemetryOpenUrl)
@@ -387,9 +388,9 @@ extension ShareViewController {
        func firefoxUrl(_ url: String) -> String {
             let encoded = url.addingPercentEncoding(withAllowedCharacters: NSCharacterSet.alphanumerics) ?? ""
             if isSearch {
-                return "firefox://open-text?text=\(encoded)"
+                return "firefox://open-text?text=\(encoded)&private=\(isPrivate)"
             }
-            return "firefox://open-url?url=\(encoded)"
+            return "firefox://open-url?url=\(encoded)&private=\(isPrivate)"
         }
 
         guard let url = URL(string: firefoxUrl(url)) else { return }
@@ -420,6 +421,16 @@ extension ShareViewController {
 
         if let shareItem = shareItem, case .shareItem(let item) = shareItem {
             openFirefox(withUrl: item.url, isSearch: false)
+        }
+
+        finish(afterDelay: 0)
+    }
+
+    @objc func actionOpenInPrivate(gesture: UIGestureRecognizer) {
+        gesture.isEnabled = false
+
+        if let shareItem = shareItem, case .shareItem(let item) = shareItem {
+            openFirefox(withUrl: item.url, isSearch: false, isPrivate: true)
         }
 
         finish(afterDelay: 0)

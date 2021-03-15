@@ -202,6 +202,12 @@ class Tab: NSObject {
         return false
     }
 
+    fileprivate(set) var pageZoom: CGFloat = 1.0 {
+        didSet {
+            webView?.setValue(pageZoom, forKey: "viewScale")
+        }
+    }
+
     fileprivate(set) var screenshot: UIImage?
     var screenshotUUID: UUID?
 
@@ -489,6 +495,38 @@ class Tab: NSObject {
         }
     }
 
+    func zoomIn() {
+        if pageZoom == 0.75 {
+            pageZoom = 0.85
+        } else if pageZoom == 0.85 {
+            pageZoom = 1.0
+        } else if pageZoom == 1.0 {
+            pageZoom = 1.15
+        } else if pageZoom == 1.15 {
+            pageZoom = 1.25
+        } else if pageZoom == 3.0 {
+            return
+        } else {
+            pageZoom += 0.25
+        }
+    }
+
+    func zoomOut() {
+        if pageZoom == 0.5 {
+            return
+        } else if pageZoom == 0.85 {
+            pageZoom = 0.75
+        } else if pageZoom == 1.0 {
+            pageZoom = 0.85
+        } else if pageZoom == 1.15 {
+            pageZoom = 1.0
+        } else if pageZoom == 1.25 {
+            pageZoom = 1.15
+        } else {
+            pageZoom -= 0.25
+        }
+    }
+
     func addContentScript(_ helper: TabContentScript, name: String) {
         contentScriptManager.addContentScript(helper, name: name, forTab: self)
     }
@@ -555,7 +593,14 @@ class Tab: NSObject {
 
     func toggleChangeUserAgent() {
         changedUserAgent = !changedUserAgent
-        reload()
+
+        if changedUserAgent, let url = url?.withoutMobilePrefix() {
+            let request = URLRequest(url: url)
+            webView?.load(request)
+        } else {
+            reload()
+        }
+
         TabEvent.post(.didToggleDesktopMode, for: self)
     }
 
@@ -765,5 +810,35 @@ class TabWebViewMenuHelper: UIView {
                 tabWebView.delegate?.tabWebView(tabWebView, didSelectFindInPageForSelection: selection)
             }
         }
+    }
+}
+
+extension URL {
+    /**
+    Returns a URL without a mobile prefix (`"m."` or `"mobile."`)
+    */
+    func withoutMobilePrefix() -> URL {
+        let mPrefix = "m."
+        let mobilePrefix = "mobile."
+
+        let foundPrefix: String?
+        if host?.contains(mPrefix) == true {
+            foundPrefix = mPrefix
+        } else if host?.contains(mobilePrefix) == true {
+            foundPrefix = mobilePrefix
+        } else {
+            foundPrefix = nil
+        }
+
+        guard
+            let prefixToRemove = foundPrefix,
+            var components = URLComponents(url: self, resolvingAgainstBaseURL: true),
+            var host = components.host,
+            let range = host.range(of: prefixToRemove) else { return self }
+
+        host.removeSubrange(range)
+        components.host = host
+
+        return components.url ?? self
     }
 }

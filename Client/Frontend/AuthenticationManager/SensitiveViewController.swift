@@ -86,11 +86,8 @@ class SensitiveViewController: UIViewController {
         }
     }
 
-    fileprivate func addBlurredContent() -> UIImageView? {
-        guard let snapshot = view.screenshot() else {
-            return nil
-        }
-
+    fileprivate func addBlurredContent() -> UIImageView {
+        let snapshot = view.screenshot()
         let blurredSnapshot = snapshot.applyBlur(withRadius: 10, blurType: BOXFILTER, tintColor: UIColor(white: 1, alpha: 0.3), saturationDeltaFactor: 1.8, maskImage: nil)
         let blurView = UIImageView(image: blurredSnapshot)
         view.addSubview(blurView)

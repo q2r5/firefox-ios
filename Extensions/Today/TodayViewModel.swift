@@ -25,7 +25,7 @@ class TodayWidgetViewModel {
             self.AppearanceDelegate?.openContainingApp("?text=\(TodayModel.searchedText ?? "")", query: "open-text")
         } else {
             UIPasteboard.general.asyncURL().uponQueue(.main) { res in
-                guard let url: URL? = res.successValue else {
+                guard let url = try? res.get() else {
                     TodayModel.copiedURL = nil
                     return
                 }

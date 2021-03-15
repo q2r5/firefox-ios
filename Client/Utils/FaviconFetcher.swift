@@ -131,10 +131,10 @@ open class FaviconFetcher: NSObject, XMLParserDelegate {
         faviconLabel.font = UIFont.systemFont(ofSize: 40, weight: UIFont.Weight.medium)
         faviconLabel.textColor = UIColor.Photon.White100
         faviconLabel.backgroundColor = color(forUrl: url)
-        UIGraphicsBeginImageContextWithOptions(faviconLabel.bounds.size, false, 0.0)
-        faviconLabel.layer.render(in: UIGraphicsGetCurrentContext()!)
-        faviconImage = UIGraphicsGetImageFromCurrentImageContext()!
-        UIGraphicsEndImageContext()
+        let renderer = UIGraphicsImageRenderer(size: faviconLabel.bounds.size)
+        faviconImage = renderer.image { context in
+            faviconLabel.layer.render(in: context.cgContext)
+        }
 
         characterToFaviconCache[faviconLetter] = faviconImage
         return faviconImage

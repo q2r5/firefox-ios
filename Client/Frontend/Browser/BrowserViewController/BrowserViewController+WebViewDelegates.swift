@@ -108,8 +108,10 @@ extension BrowserViewController: WKUIDelegate {
             let clonedWebView = WKWebView(frame: webView.frame, configuration: webView.configuration)
 
             previewViewController.view.addSubview(clonedWebView)
-            clonedWebView.snp.makeConstraints { make in
-                make.edges.equalTo(previewViewController.view)
+            ensureMainThread {
+                clonedWebView.snp.makeConstraints { make in
+                    make.edges.equalTo(previewViewController.view)
+                }
             }
 
             clonedWebView.load(URLRequest(url: url))
@@ -120,6 +122,7 @@ extension BrowserViewController: WKUIDelegate {
                 let contextHelper = currentTab.getContentScript(name: ContextMenuHelper.name()) as? ContextMenuHelper,
                 let elements = contextHelper.elements else { return nil }
             let isPrivate = currentTab.isPrivate
+            var title = url.absoluteString
             let addTab = { (rURL: URL, isPrivate: Bool) in
                 let tab = self.tabManager.addTab(URLRequest(url: rURL as URL), afterTab: currentTab, isPrivate: isPrivate)
                 LeanPlumClient.shared.track(event: .openedNewTab, withParameters: ["Source": "Long Press Context Menu"])
@@ -153,22 +156,22 @@ extension BrowserViewController: WKUIDelegate {
             var actions = [UIAction]()
 
             if !isPrivate {
-                actions.append(UIAction(title: Strings.ContextMenuOpenInNewTab, image: UIImage.templateImageNamed("menu-NewTab"), identifier: UIAction.Identifier(rawValue: "linkContextMenu.openInNewTab")) {_ in
+                actions.append(UIAction(title: Strings.ContextMenuOpenInNewTab, identifier: UIAction.Identifier(rawValue: "linkContextMenu.openInNewTab")) {_ in
                     addTab(url, false)
                 })
             }
 
-            actions.append(UIAction(title: Strings.ContextMenuOpenInNewPrivateTab, image: UIImage.templateImageNamed("menu-NewPrivateTab"), identifier: UIAction.Identifier("linkContextMenu.openInNewPrivateTab")) { _ in
+            actions.append(UIAction(title: Strings.ContextMenuOpenInNewPrivateTab, identifier: UIAction.Identifier("linkContextMenu.openInNewPrivateTab")) { _ in
                 addTab(url, true)
             })
 
-            actions.append(UIAction(title: Strings.ContextMenuBookmarkLink, image: UIImage.templateImageNamed("menu-Bookmark"), identifier: UIAction.Identifier("linkContextMenu.bookmarkLink")) { _ in
+            actions.append(UIAction(title: Strings.ContextMenuBookmarkLink, identifier: UIAction.Identifier("linkContextMenu.bookmarkLink")) { _ in
                 self.addBookmark(url: url.absoluteString, title: elements.title)
                 SimpleToast().showAlertWithText(Strings.AppMenuAddBookmarkConfirmMessage, bottomContainer: self.webViewContainer)
                 TelemetryWrapper.recordEvent(category: .action, method: .add, object: .bookmark, value: .contextMenu)
             })
 
-            actions.append(UIAction(title: Strings.ContextMenuDownloadLink, image: UIImage.templateImageNamed("menu-panel-Downloads"), identifier: UIAction.Identifier("linkContextMenu.download")) {_ in
+            actions.append(UIAction(title: Strings.ContextMenuDownloadLink, identifier: UIAction.Identifier("linkContextMenu.download")) {_ in
                 // This checks if download is a blob, if yes, begin blob download process
                 if !DownloadContentScript.requestBlobDownload(url: url, tab: currentTab) {
                     //if not a blob, set pendingDownloadWebView and load the request in the webview, which will trigger the WKWebView navigationResponse delegate function and eventually downloadHelper.open()
@@ -178,18 +181,24 @@ extension BrowserViewController: WKUIDelegate {
                 }
             })
 
-            actions.append(UIAction(title: Strings.ContextMenuCopyLink, image: UIImage.templateImageNamed("menu-Copy-Link"), identifier: UIAction.Identifier("linkContextMenu.copyLink")) { _ in
+            actions.append(UIAction(title: Strings.ContextMenuCopyLink, identifier: UIAction.Identifier("linkContextMenu.copyLink")) { _ in
                 UIPasteboard.general.url = url
             })
 
-            actions.append(UIAction(title: Strings.ContextMenuShareLink, image: UIImage.templateImageNamed("action_share"), identifier: UIAction.Identifier("linkContextMenu.share")) { _ in
+            actions.append(UIAction(title: Strings.ContextMenuShareLink, identifier: UIAction.Identifier("linkContextMenu.share")) { _ in
                 guard let tab = self.tabManager[webView], let helper = tab.getContentScript(name: ContextMenuHelper.name()) as? ContextMenuHelper else { return }
                 // This is only used on ipad for positioning the popover. On iPhone it is an action sheet.
-                let p = webView.convert(helper.touchPoint, to: self.view)
+                var p = helper.touchPoint
+                let offset = webView.scrollView.bounds.origin
+                let zoomScale = webView.scrollView.zoomScale
+                p.x = p.x * zoomScale - offset.x
+                p.y = p.y * zoomScale - offset.y
+                p = webView.convert(p, to: self.view)
                 self.presentActivityViewController(url as URL, sourceView: self.view, sourceRect: CGRect(origin: p, size: CGSize(width: 10, height: 10)), arrowDirection: .unknown)
             })
 
             if let url = elements.image {
+                title = elements.title ?? elements.alt ?? url.absoluteString
                 actions.append(UIAction(title: Strings.ContextMenuSaveImage, identifier: UIAction.Identifier("linkContextMenu.saveImage")) { _ in
                     getImageData(url) { data in
                         guard let image = UIImage(data: data) else { return }
@@ -231,8 +240,14 @@ extension BrowserViewController: WKUIDelegate {
                 })
             }
 
-            return UIMenu(title: url.absoluteString, children: actions)
+            return UIMenu(title: title, children: actions)
         }))
+    }
+
+    @available(iOS 13.0, *)
+    func webView(_ webView: WKWebView, contextMenuForElement elementInfo: WKContextMenuElementInfo, willCommitWithAnimator animator: UIContextMenuInteractionCommitAnimating) {
+        guard let url = elementInfo.linkURL else { return }
+        webView.load(URLRequest(url: url))
     }
     
     func writeToPhotoAlbum(image: UIImage) {
@@ -300,12 +315,14 @@ extension BrowserViewController: WKNavigationDelegate {
     }
 
     // Recognize a iTunes Store URL. These all trigger the native apps. Note that appstore.com and phobos.apple.com
-    // used to be in this list. I have removed them because they now redirect to itunes.apple.com. If we special case
+    // used to be in this list. I have removed them because they now redirect to apps.apple.com. If we special case
     // them then iOS will actually first open Safari, which then redirects to the app store. This works but it will
     // leave a 'Back to Safari' button in the status bar, which we do not want.
     fileprivate func isStoreURL(_ url: URL) -> Bool {
         if url.scheme == "http" || url.scheme == "https" || url.scheme == "itms-apps" {
-            if url.host == "itunes.apple.com" {
+            if url.host == "apps.apple.com" ||
+                url.host == "tv.apple.com" ||
+                url.host == "music.apple.com" {
                 return true
             }
         }
@@ -384,9 +401,11 @@ extension BrowserViewController: WKNavigationDelegate {
         // iOS will always say yes.
 
         if isAppleMapsURL(url) {
-            UIApplication.shared.open(url, options: [:])
-            decisionHandler(.cancel)
-            return
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url, options: [.universalLinksOnly: 1])
+                decisionHandler(.cancel)
+                return
+            }
         }
 
         if isStoreURL(url) {
@@ -505,9 +524,6 @@ extension BrowserViewController: WKNavigationDelegate {
 
         // Check if this response should be handed off to Passbook.
         if let passbookHelper = OpenPassBookHelper(request: request, response: response, canShowInWebView: canShowInWebView, forceDownload: forceDownload, browserViewController: self) {
-            // Clear the network activity indicator since our helper is handling the request.
-            UIApplication.shared.isNetworkActivityIndicatorVisible = false
-
             // Open our helper and cancel this response from the webview.
             passbookHelper.open()
             decisionHandler(.cancel)
@@ -539,9 +555,6 @@ extension BrowserViewController: WKNavigationDelegate {
 
         // Check if this response should be downloaded.
         if let downloadHelper = DownloadHelper(request: request, response: response, canShowInWebView: canShowInWebView, forceDownload: forceDownload, browserViewController: self) {
-            // Clear the network activity indicator since our helper is handling the request.
-            UIApplication.shared.isNetworkActivityIndicatorVisible = false
-
             // Clear the pending download web view so that subsequent navigations from the same
             // web view don't invoke another download.
             pendingDownloadWebView = nil

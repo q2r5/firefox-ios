@@ -10,8 +10,19 @@ import SnapKit
 import Account
 
 protocol DevicePickerViewControllerDelegate {
-    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePickerViewController)
-    func devicePickerViewController(_ devicePickerViewController: DevicePickerViewController, didPickDevices devices: [RemoteDevice])
+    func devicePickerViewControllerDidCancel(_ devicePickerViewController: DevicePicker)
+    func devicePickerViewController(_ devicePickerViewController: DevicePicker, didPickDevices devices: [RemoteDevice])
+}
+
+protocol DevicePicker: UIViewController {
+    var profile: Profile? { get set }
+    var profileNeedsShutdown: Bool { get set }
+    var pickerDelegate: DevicePickerViewControllerDelegate? { get set }
+    
+    // ShareItem has been added as we are now using this class outside of the ShareTo extension to provide Share To functionality
+    // And in this case we need to be able to store the item we are sharing as we may not have access to the
+    // url later. Currently used only when sharing an item from the Tab Tray from a Preview Action.
+    var shareItem: ShareItem? { get set }
 }
 
 private struct DevicePickerViewControllerUX {
@@ -31,7 +42,7 @@ fileprivate enum LoadingState {
     case loaded
 }
 
-class DevicePickerViewController: UITableViewController {
+class DevicePickerViewController: UITableViewController, DevicePicker {
     private var devices = [RemoteDevice]()
     var profile: Profile?
     var profileNeedsShutdown = true
@@ -101,7 +112,8 @@ class DevicePickerViewController: UITableViewController {
 
             self.devices = state.remoteDevices.map { d in
                 let t = "\(d.deviceType)"
-                return RemoteDevice(id: d.id, name: d.displayName, type: t, isCurrentDevice: d.isCurrentDevice, lastAccessTime: d.lastAccessTime, availableCommands: nil)
+                let lastAccessTime = d.lastAccessTime == nil ? nil : UInt64(clamping: d.lastAccessTime!)
+                return RemoteDevice(id: d.id, name: d.displayName, type: t, isCurrentDevice: d.isCurrentDevice, lastAccessTime: lastAccessTime, availableCommands: nil)
             }
 
             if self.devices.isEmpty {
@@ -259,15 +271,26 @@ class DevicePickerTableViewHeaderCell: UITableViewCell {
 
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        addSubview(nameLabel)
-        nameLabel.font = DevicePickerViewControllerUX.TableHeaderTextFont
-        nameLabel.text = Strings.SendToDevicesListTitle
-        nameLabel.textColor = DevicePickerViewControllerUX.TableHeaderTextColor
+        
+        if #available(iOS 14, *) {
+            var contentConfig = defaultContentConfiguration()
+            contentConfig.text = Strings.SendToDevicesListTitle
+            contentConfig.textProperties.font = DevicePickerViewControllerUX.TableHeaderTextFont
+            contentConfig.textProperties.color = DevicePickerViewControllerUX.TableHeaderTextColor
+            contentConfig.directionalLayoutMargins = .init(top: 0, leading: DevicePickerViewControllerUX.TableHeaderTextPaddingLeft, bottom: 0, trailing: 0)
+            contentConfig.axesPreservingSuperviewLayoutMargins = .vertical
+            self.contentConfiguration = contentConfig
+        } else {
+            addSubview(nameLabel)
+            nameLabel.font = DevicePickerViewControllerUX.TableHeaderTextFont
+            nameLabel.text = Strings.SendToDevicesListTitle
+            nameLabel.textColor = DevicePickerViewControllerUX.TableHeaderTextColor
 
-        nameLabel.snp.makeConstraints { (make) -> Void in
-            make.left.equalTo(DevicePickerViewControllerUX.TableHeaderTextPaddingLeft)
-            make.centerY.equalTo(self)
-            make.right.equalTo(self)
+            nameLabel.snp.makeConstraints { (make) -> Void in
+                make.left.equalTo(DevicePickerViewControllerUX.TableHeaderTextPaddingLeft)
+                make.centerY.equalTo(self)
+                make.right.equalTo(self)
+            }
         }
 
         preservesSuperviewLayoutMargins = false
@@ -359,8 +382,10 @@ class DevicePickerNoClientsTableViewCell: UITableViewCell {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupHelpView(contentView,
             introText: Strings.SendToNoDevicesFound,
-            showMeText: "") // TODO We used to have a 'show me how to ...' text here. But, we cannot open web pages from the extension. So this is clear for now until we decide otherwise.
-        // Move the separator off screen
+            showMeText: "",
+                target: nil,
+                action: nil
+            ) // TODO We used to have a 'show me how to ...' text here. But, we cannot open web pages from the extension. So this is clear for now until we decide otherwise.
         separatorInset = UIEdgeInsets(top: 0, left: 1000, bottom: 0, right: 0)
     }
 

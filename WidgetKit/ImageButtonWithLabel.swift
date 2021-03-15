@@ -71,7 +71,7 @@ struct ImageButtonWithLabel: View {
                     HStack(alignment: .top) {
                         VStack(alignment: .leading){
                                 Text(link.label)
-                                    .font(.headline)
+                                    .font(.subheadline)
                                     .minimumScaleFactor(0.75)
                                     .layoutPriority(1000)
                         }
@@ -95,8 +95,8 @@ struct ImageButtonWithLabel: View {
                         }
                     }
                 }
-                .foregroundColor(Color("widgetLabelColors"))
-                .padding([.horizontal,.vertical], paddingValue)
+                .foregroundColor(.white)
+                .padding(.all, paddingValue)
             }
         }
     }

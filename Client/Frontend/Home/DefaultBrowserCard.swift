@@ -93,6 +93,7 @@ class DefaultBrowserCard: UIView {
             make.top.equalToSuperview()
             make.bottom.equalTo(learnHowButton.snp.top)
             make.height.greaterThanOrEqualTo(114)
+            make.left.equalToSuperview()
         }
         image.snp.makeConstraints { make in
             make.left.equalToSuperview().offset(18)

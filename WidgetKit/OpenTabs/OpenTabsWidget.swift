@@ -57,7 +57,7 @@ struct OpenTabsView: View {
     var openFirefoxButton: some View {
         HStack(alignment: .center, spacing: 15) {
             Image("openFirefox").foregroundColor(Color.white)
-            Text("Open Firefox").foregroundColor(Color.white).lineLimit(1).font(.system(size: 13, weight: .semibold, design: .default))
+            Text(String.OpenFirefoxLabel).foregroundColor(Color.white).lineLimit(1).font(.system(size: 13, weight: .semibold, design: .default))
             Spacer()
         }.padding([.horizontal])
     }
@@ -105,10 +105,5 @@ struct OpenTabsView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background((Color(UIColor(red: 0.11, green: 0.11, blue: 0.13, alpha: 1.00))))
-    }
-    
-    private func linkToContainingApp(_ urlSuffix: String = "", query: String) -> URL {
-        let urlString = "\(scheme)://\(query)\(urlSuffix)"
-        return URL(string: urlString)!
     }
 }

@@ -34,7 +34,7 @@ class RelativeDatesTests: XCTestCase {
         date = Date(timeInterval: -60 * 60 * 24 * 7 * 5 * 2, since: dateOrig)
         XCTAssertEqual(date.toRelativeTimeString(), DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .short))
 
-        date = Date(timeInterval: -60 * 60 * 24 * 7 * 5 * 12 * 2, since: dateOrig)
+        date = Date(timeInterval: TimeInterval(-72576000), since: dateOrig)
         XCTAssertEqual(date.toRelativeTimeString(), DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .short))
     }
 }

@@ -30,11 +30,13 @@ protocol URLBarDelegate: AnyObject {
     /// - returns: whether the long-press was handled by the delegate; i.e. return `false` when the conditions for even starting handling long-press were not satisfied
     func urlBarDidLongPressReaderMode(_ urlBar: URLBarView) -> Bool
     func urlBarDidLongPressReload(_ urlBar: URLBarView, from button: UIButton)
+    func urlBarReloadContextMenu(_ suggested: [UIMenuElement]?) -> UIMenu?
     func urlBarDidPressStop(_ urlBar: URLBarView)
     func urlBarDidPressReload(_ urlBar: URLBarView)
     func urlBarDidEnterOverlayMode(_ urlBar: URLBarView)
     func urlBarDidLeaveOverlayMode(_ urlBar: URLBarView)
     func urlBarDidLongPressLocation(_ urlBar: URLBarView)
+    func urlBarLocationContextMenu(_ suggested: [UIMenuElement]?) -> UIMenu?
     func urlBarDidPressQRButton(_ urlBar: URLBarView)
     func urlBarDidPressPageOptions(_ urlBar: URLBarView, from button: UIButton)
     func urlBarDidTapShield(_ urlBar: URLBarView)
@@ -220,6 +222,9 @@ class URLBarView: UIView {
          libraryButton, appMenuButton, addNewTabButton, forwardButton, backButton, multiStateButton, locationContainer, searchIconImageView].forEach {
             addSubview($0)
         }
+        
+        multiStateButton.addInteraction(UIContextMenuInteraction(delegate: self))
+        locationView.addInteraction(UIContextMenuInteraction(delegate: self))
 
         privateModeBadge.add(toParent: self)
         appMenuBadge.add(toParent: self)
@@ -782,6 +787,17 @@ extension URLBarView: AutocompleteTextFieldDelegate {
         if let pasteboardContents = UIPasteboard.general.string {
             self.delegate?.urlBar(self, didSubmitText: pasteboardContents)
         }
+    }
+}
+
+extension URLBarView: UIContextMenuInteractionDelegate {
+    func contextMenuInteraction(_ interaction: UIContextMenuInteraction, configurationForMenuAtLocation location: CGPoint) -> UIContextMenuConfiguration? {
+        if multiStateButton.point(inside: location, with: nil) {
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: self.delegate?.urlBarReloadContextMenu)
+        } else if locationView.point(inside: location, with: nil) {
+            return UIContextMenuConfiguration(identifier: nil, previewProvider: nil, actionProvider: self.delegate?.urlBarLocationContextMenu)
+        }
+        return nil
     }
 }
 

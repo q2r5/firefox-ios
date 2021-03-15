@@ -25,6 +25,7 @@ struct MIMEType {
     static let Calendar = "text/calendar"
     static let USDZ = "model/vnd.usdz+zip"
     static let Reality = "model/vnd.reality"
+    static let XML = "application/xml"
 
     private static let webViewViewableTypes: [String] = [MIMEType.Bitmap, MIMEType.GIF, MIMEType.JPEG, MIMEType.HTML, MIMEType.PDF, MIMEType.PlainText, MIMEType.PNG, MIMEType.WebP]
 
@@ -88,7 +89,7 @@ class DownloadHelper: NSObject, OpenInHelper {
     }
 
     func open() {
-        guard let host = request.url?.host else {
+        guard let url = request.url, let host = url.host else {
             return
         }
 
@@ -119,7 +120,13 @@ class DownloadHelper: NSObject, OpenInHelper {
             TelemetryWrapper.recordEvent(category: .action, method: .tap, object: .downloadNowButton)
         }
 
-        let actions = [[filenameItem], [downloadFileItem]]
+        let openInItem = PhotonActionSheetItem(title: Strings.OpenInDownloadHelperAlertOpenIn) { _, _ in
+            let helper = ShareExtensionHelper(url: url, tab: nil)
+            let controller = helper.createActivityViewController { (_, _) in }
+            self.browserViewController.present(controller, animated: true, completion: nil)
+        }
+
+        let actions = [[filenameItem], [downloadFileItem], [openInItem]]
 
         browserViewController.presentSheetWith(actions: actions, on: browserViewController, from: browserViewController.urlBar, closeButtonTitle: Strings.CancelString, suppressPopover: true)
     }

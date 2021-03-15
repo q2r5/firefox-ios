@@ -620,7 +620,6 @@ window.__firefox__.includeOnce("LoginsHelper", function() {
     return false;
   }
 
-
   function findLogins(form) {
     try {
         LoginManagerContent._asyncFindLogins(form, { })

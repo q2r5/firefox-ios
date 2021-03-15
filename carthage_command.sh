@@ -1,4 +1,5 @@
-xcodesdk=`xcodebuild -scheme Firefox  -showBuildSettings  | grep -i 'SDK_VERSION =' | sed 's/[ ]*SDK_VERSION = //' | colrm 3`
+#! /usr/bin/env bash
+xcodesdk=$(xcodebuild -scheme Firefox  -showBuildSettings  | grep -i 'SDK_VERSION =' | sed 's/[ ]*SDK_VERSION = //' | colrm 3)
 echo Xcode SDK: "$xcodesdk"
 if [[ "$xcodesdk" != "13" ]]; then
   echo XCode 12 version detected! ••• Please ensure this is correct. ••• 

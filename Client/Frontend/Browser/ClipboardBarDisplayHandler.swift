@@ -44,9 +44,8 @@ class ClipboardBarDisplayHandler: NSObject, URLChangeDelegate {
                 NotificationCenter.default.addObserver(self, selector: #selector(self.UIPasteboardChanged), name: UIPasteboard.changedNotification, object: nil)
             }
 
-            guard let copiedURL: URL? = res.successValue,
-                let url = copiedURL else {
-                    return
+            guard let url = try? res.get() else {
+                return
             }
             self.lastDisplayedURL = url.absoluteString
         }
@@ -126,8 +125,7 @@ class ClipboardBarDisplayHandler: NSObject, URLChangeDelegate {
             return
         }
         UIPasteboard.general.asyncURL().uponQueue(.main) { res in
-            guard let copiedURL: URL? = res.successValue,
-                let url = copiedURL else {
+            guard let url = try? res.get() else {
                 return
             }
 

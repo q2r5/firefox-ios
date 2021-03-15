@@ -21,7 +21,7 @@ struct TabTrayV2ControllerUX {
     static let backgroundColor = UIColor.Photon.Grey10
 }
 
-class TabTrayV2ViewController: UIViewController, Themeable {
+class TabTrayV2ViewController: UIViewController, Themeable, TabTrayViewDelegate {
     weak var delegate: TabTrayDelegate?
     // View Model
     lazy var viewModel = TabTrayV2ViewModel(viewController: self)
@@ -40,55 +40,36 @@ class TabTrayV2ViewController: UIViewController, Themeable {
     }()
     lazy var emptyPrivateTabsView: EmptyPrivateTabsView = {
         let emptyView = EmptyPrivateTabsView()
+        emptyView.titleLabel.textColor = .black
+        emptyView.descriptionLabel.textColor = .black
         emptyView.learnMoreButton.addTarget(self, action: #selector(didTapLearnMore), for: .touchUpInside)
         return emptyView
     }()
-    lazy var countLabel: UILabel = {
-        let label = UILabel(frame: CGRect(width: 24, height: 24))
-        label.font = TabsButtonUX.TitleFont
-        label.layer.cornerRadius = TabsButtonUX.CornerRadius
-        label.textAlignment = .center
-        label.text = String(viewModel.countOfNormalTabs())
-        return label
-    }()
-    lazy var navigationMenu: UISegmentedControl = {
-        let navigationMenu = UISegmentedControl(items: [UIImage(named: "nav-tabcounter")!.overlayWith(image: countLabel), UIImage(named: "smallPrivateMask")!])
-        navigationMenu.accessibilityIdentifier = "navBarTabTray"
-        navigationMenu.selectedSegmentIndex = viewModel.isInPrivateMode ? 1 : 0
-        navigationMenu.addTarget(self, action: #selector(panelChanged), for: .valueChanged)
-        return navigationMenu
-    }()
-    lazy var navigationToolbar: UIToolbar = {
-        let toolbar = UIToolbar()
-        toolbar.delegate = self
-        toolbar.setItems([UIBarButtonItem(customView: navigationMenu)], animated: false)
-        return toolbar
-    }()
-    lazy var deleteAllButton: UIBarButtonItem = {
-        let deleteAllButton = UIBarButtonItem(image: UIImage.templateImageNamed("action_delete"), style: .plain, target: self, action: #selector(didTapToolbarDelete))
-        deleteAllButton.accessibilityIdentifier = "closeAllTabsButtonTabTray"
-        return deleteAllButton
-    }()
-    lazy var newTabButton: UIBarButtonItem = {
-        let newTabButton = UIBarButtonItem(customView: NewTabButton(target: self, selector: #selector(didTapToolbarAddTab)))
-        newTabButton.accessibilityIdentifier = "newTabButtonTabTray"
-        return newTabButton
-    }()
-    lazy var bottomToolbar: [UIBarButtonItem] = {
+
+    lazy var normalToolbarItems: [UIBarButtonItem] = {
         let bottomToolbar = [
-            deleteAllButton,
-            UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
-            newTabButton
+            UIBarButtonItem(image: UIImage.templateImageNamed("action_delete"), style: .plain, target: self, action: #selector(didTapToolbarDelete)),
+            UIBarButtonItem(systemItem: .flexibleSpace),
+            UIBarButtonItem(customView: NewTabButton(target: self, selector: #selector(didTapToolbarAddTab)))
         ]
         return bottomToolbar
     }()
-    
+
+    lazy var editToolbarItems: [UIBarButtonItem] = {
+        let bottomToolbar = [
+            UIBarButtonItem(title: Strings.ShareContextMenuTitle, style: .plain, target: self, action: nil),
+            UIBarButtonItem(systemItem: .flexibleSpace),
+            UIBarButtonItem(image: UIImage.templateImageNamed("action_delete"), style: .plain, target: self, action: #selector(didTapToolbarDeleteSelected))
+        ]
+        return bottomToolbar
+    }()
+
+    lazy var moreButton: UIBarButtonItem = {
+        return UIBarButtonItem(image: UIImage(systemName: "ellipsis.circle.fill"), style: .plain, target: self, action: #selector(didTapToolbarMore))
+    }()
+
     // Constants
     fileprivate let sectionHeaderIdentifier = "SectionHeader"
-    
-    override var preferredStatusBarStyle: UIStatusBarStyle {
-        return .lightContent
-    }
     
     init(tabTrayDelegate: TabTrayDelegate? = nil, profile: Profile) {
         self.delegate = tabTrayDelegate
@@ -107,51 +88,36 @@ class TabTrayV2ViewController: UIViewController, Themeable {
         applyTheme()
     }
 
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        parent?.navigationItem.title = Strings.TabTrayV2Title
+        parent?.navigationItem.setRightBarButton(moreButton, animated: animated)
+        parent?.navigationController?.setToolbarHidden(false, animated: animated)
+        parent?.setToolbarItems(normalToolbarItems, animated: animated)
+    }
+
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         viewModel.addPrivateTab()
     }
     
     private func viewSetup() {
-        // MARK: TODO - Theme setup setup
-        if let window = (UIApplication.shared.delegate?.window)! as UIWindow? {
-            window.backgroundColor = .black
-        }
-        
-        // Navigation bar
-        navigationController?.navigationBar.shadowImage = UIImage()
-        navigationItem.title = Strings.TabTrayV2Title
         if #available(iOS 13.0, *) { } else {
-            navigationItem.leftBarButtonItem = UIBarButtonItem(title: Strings.CloseButtonTitle, style: .done, target: self, action: #selector(dismissTabTray))
+            parent?.navigationItem.leftBarButtonItem = UIBarButtonItem(title: Strings.CloseButtonTitle, style: .done, target: self, action: #selector(dismissTabTray))
             TelemetryWrapper.recordEvent(category: .action, method: .close, object: .tabTray)
         }
-        
-        // Bottom toolbar
-        navigationController?.isToolbarHidden = false
-        setToolbarItems(bottomToolbar, animated: false)
-        
+
         // Add Subviews
-        view.addSubview(navigationToolbar)
         view.addSubview(tableView)
         view.addSubview(emptyPrivateTabsView)
         viewModel.updateTabs()
         // Constraints
         tableView.snp.makeConstraints { make in
-            make.left.equalTo(view.safeArea.left)
-            make.right.equalTo(view.safeArea.right)
-            make.bottom.equalTo(view)
-            make.top.equalTo(navigationToolbar.snp.bottom)
-        }
-        navigationToolbar.snp.makeConstraints { make in
-            make.left.right.equalTo(view)
-            make.top.equalTo(view.safeArea.top)
-        }
-        navigationMenu.snp.makeConstraints { make in
-            make.height.equalTo(TabTrayV2ControllerUX.navigationMenuHeight)
+            make.leading.trailing.equalTo(view.safeAreaLayoutGuide)
+            make.top.bottom.equalTo(view)
         }
         emptyPrivateTabsView.snp.makeConstraints { make in
-            make.bottom.left.right.equalTo(view)
-            make.top.equalTo(navigationToolbar.snp.bottom)
+            make.edges.equalTo(view.safeAreaLayoutGuide)
         }
         
         emptyPrivateTabsView.isHidden = true
@@ -168,23 +134,15 @@ class TabTrayV2ViewController: UIViewController, Themeable {
 
     func applyTheme() {
         if #available(iOS 13.0, *) {
+            overrideUserInterfaceStyle = ThemeManager.instance.userInterfaceStyle
+            bottomSheetVC?.overrideUserInterfaceStyle = ThemeManager.instance.userInterfaceStyle
             tableView.backgroundColor = UIColor.systemGroupedBackground
-            view.backgroundColor = UIColor.systemGroupedBackground
-            navigationController?.navigationBar.tintColor = UIColor.label
-            navigationController?.toolbar.tintColor = UIColor.label
-            navigationItem.rightBarButtonItem?.tintColor = UIColor.label
             emptyPrivateTabsView.titleLabel.textColor = UIColor.label
             emptyPrivateTabsView.descriptionLabel.textColor = UIColor.secondaryLabel
         } else {
             tableView.backgroundColor = UIColor.theme.tableView.headerBackground
             view.backgroundColor = UIColor.theme.tableView.headerBackground
             tableView.separatorColor = UIColor.theme.tableView.separator
-            navigationController?.navigationBar.barTintColor = UIColor.theme.tabTray.toolbar
-            navigationController?.navigationBar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
-            navigationController?.toolbar.barTintColor = UIColor.theme.tabTray.toolbar
-            navigationController?.toolbar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
-            navigationToolbar.barTintColor = UIColor.theme.tabTray.toolbar
-            navigationToolbar.tintColor = UIColor.theme.tabTray.toolbarButtonTint
             emptyPrivateTabsView.titleLabel.textColor = UIColor.theme.tableView.rowText
             emptyPrivateTabsView.descriptionLabel.textColor = UIColor.theme.tableView.rowDetailText
         }
@@ -206,6 +164,19 @@ class TabTrayV2ViewController: UIViewController, Themeable {
             if ThemeManager.instance.systemThemeIsOn {
                 tableView.reloadData()
             }
+        }
+    }
+    
+    override func setEditing(_ editing: Bool, animated: Bool) {
+        super.setEditing(editing, animated: animated)
+        tableView.setEditing(editing, animated: animated)
+        viewModel.selectedTabs = []
+        if editing {
+            parent?.navigationItem.setRightBarButton(editButtonItem, animated: animated)
+            parent?.setToolbarItems(editToolbarItems, animated: animated)
+        } else {
+            parent?.navigationItem.setRightBarButton(moreButton, animated: animated)
+            parent?.setToolbarItems(normalToolbarItems, animated: animated)
         }
     }
 }
@@ -232,6 +203,21 @@ extension TabTrayV2ViewController: UITableViewDataSource {
         tabCell.remakeTitleConstraint()
         return tabCell
     }
+
+    func tableView(_ tableView: UITableView, contextMenuConfigurationForRowAt indexPath: IndexPath, point: CGPoint) -> UIContextMenuConfiguration? {
+        let bvc = BrowserViewController.foregroundBVC()
+        guard let tab = viewModel.getTab(forIndex: indexPath) else {
+            return nil
+        }
+
+        let tabVC = TabPeekViewController(tab: tab, delegate: viewModel)
+
+        if let profile = bvc.profile as? BrowserProfile {
+            tabVC.setState(withProfile: profile, clientPickerDelegate: bvc)
+        }
+
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: { return tabVC }, actionProvider: tabVC.tabTrayActions(defaultActions:))
+    }
     
     @objc func onCloseButton(_ sender: UIButton) {
         let buttonPosition = sender.convert(CGPoint(), to: tableView)
@@ -240,20 +226,39 @@ extension TabTrayV2ViewController: UITableViewDataSource {
         }
     }
     
-    @objc func didTapToolbarAddTab(_ sender: UIBarButtonItem) {
+    @objc func didTapToolbarAddTab() {
         viewModel.addTab()
         dismissTabTray()
         TelemetryWrapper.recordEvent(category: .action, method: .add, object: .tab, value: viewModel.isInPrivateMode ? .privateTab : .normalTab)
     }
     
-    @objc func didTapToolbarDelete(_ sender: UIButton) {
+    @objc func didTapToolbarDelete() {
         let controller = AlertController(title: nil, message: nil, preferredStyle: .actionSheet)
         controller.addAction(UIAlertAction(title: Strings.AppMenuCloseAllTabsTitleString, style: .default, handler: { _ in self.viewModel.closeTabsForCurrentTray() }), accessibilityIdentifier: "TabTrayController.deleteButton.closeAll")
         controller.addAction(UIAlertAction(title: Strings.CancelString, style: .cancel, handler: nil), accessibilityIdentifier: "TabTrayController.deleteButton.cancel")
+        present(controller, animated: true, completion: nil)
+        TelemetryWrapper.recordEvent(category: .action, method: .deleteAll, object: .tab, value: viewModel.isInPrivateMode ? .privateTab : .normalTab)
+    }
+
+    @objc func didTapToolbarDeleteSelected() {
+        let controller = AlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        controller.addAction(UIAlertAction(title: "Close Selected", style: .default, handler: { _ in self.viewModel.removeSelectedTabs() }), accessibilityIdentifier: "TabTrayController.deleteButton.closeSelected")
+        controller.addAction(UIAlertAction(title: Strings.CancelString, style: .cancel, handler: nil), accessibilityIdentifier: "TabTrayController.deleteButton.cancel")
+        present(controller, animated: true, completion: nil)
+    }
+
+    @objc func didTapToolbarMore(_ sender: UIButton) {
+        let controller = AlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        controller.addAction(UIAlertAction(title: "Select Tabs", style: .default, handler: { _ in
+            self.setEditing(true, animated: true)
+        }))
+        controller.addAction(UIAlertAction(title: "Close \(self.viewModel.getTabs().count) Tabs", style: .destructive, handler: { _ in
+            self.didTapToolbarDelete()
+        }))
+        controller.addAction(UIAlertAction(title: Strings.CancelString, style: .cancel, handler: nil), accessibilityIdentifier: "TabTrayController.moreButton.cancel")
         controller.popoverPresentationController?.sourceView = sender
         controller.popoverPresentationController?.sourceRect = sender.bounds
         present(controller, animated: true, completion: nil)
-        TelemetryWrapper.recordEvent(category: .action, method: .deleteAll, object: .tab, value: viewModel.isInPrivateMode ? .privateTab : .normalTab)
     }
     
     func didTogglePrivateMode(_ togglePrivateModeOn: Bool) {
@@ -264,7 +269,7 @@ extension TabTrayV2ViewController: UITableViewDataSource {
         viewModel.updateTabs()
     }
     
-    func hideDisplayedTabs( completion: @escaping () -> Void) {
+    func hideDisplayedTabs(completion: @escaping () -> Void) {
            let cells = tableView.visibleCells
 
            UIView.animate(withDuration: 0.2,
@@ -284,6 +289,7 @@ extension TabTrayV2ViewController: UITableViewDataSource {
     @objc func dismissTabTray() {
         // We check if there is private tab then add one if user dismisses
         viewModel.addPrivateTab()
+        viewModel.selectedTabs = []
         navigationController?.dismiss(animated: true, completion: nil)
     }
     
@@ -294,23 +300,14 @@ extension TabTrayV2ViewController: UITableViewDataSource {
         }
         self.dismissTabTray()
     }
-    
-    @objc func panelChanged() {
-        switch navigationMenu.selectedSegmentIndex {
-        case 0:
-            didTogglePrivateMode(false)
-        case 1:
-            didTogglePrivateMode(true)
-        default:
-            return
-        }
-    }
 }
 
 extension TabTrayV2ViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         viewModel.didSelectRowAt(index: indexPath)
-        dismissTabTray()
+        if !isEditing {
+            dismissTabTray()
+        }
     }
     
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
@@ -318,6 +315,13 @@ extension TabTrayV2ViewController: UITableViewDelegate {
             return nil
         }
         headerView.titleLabel.text = viewModel.getSectionDateHeader(section)
+        headerView.moreButton.menu = UIMenu(children: [
+            UIAction(title: "Share All") { _ in
+            },
+            UIAction(title: "Close All", attributes: .destructive) { _ in
+                self.viewModel.removeTabs(forSection: section)
+            }
+        ])
         headerView.applyTheme()
         return headerView
     }
@@ -326,11 +330,11 @@ extension TabTrayV2ViewController: UITableViewDelegate {
         return section == TabSection(rawValue: section)?.rawValue && viewModel.numberOfRowsInSection(section: section) != 0 ? UITableView.automaticDimension : 0
     }
     func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
-        let share = UIContextualAction(style: .normal, title: Strings.ShareContextMenuTitle, handler: { (action, view, completionHandler) in
+        let share = UIContextualAction(style: .normal, title: Strings.ShareContextMenuTitle) { (_, _, _) in
             guard let tab = self.viewModel.getTab(forIndex: indexPath), let url = tab.url else { return }
             self.presentActivityViewController(url, tab: tab)
-        })
-        let more = UIContextualAction(style: .normal, title: Strings.PocketMoreStoriesText, handler: { (action, view, completionHandler) in
+        }
+        let more = UIContextualAction(style: .normal, title: Strings.PocketMoreStoriesText) { (_, _, _) in
             // Bottom toolbar
             self.navigationController?.isToolbarHidden = true
 
@@ -339,19 +343,16 @@ extension TabTrayV2ViewController: UITableViewDelegate {
             moreViewController.bottomSheetDelegate = self
             self.bottomSheetVC?.containerViewController = moreViewController
             self.bottomSheetVC?.showView()
-
-        })
-        let delete = UIContextualAction(style: .destructive, title: Strings.CloseButtonTitle, handler: { (action, view, completionHandler) in
+        }
+        let delete = UIContextualAction(style: .destructive, title: Strings.CloseButtonTitle) { (_, _, _) in
             self.viewModel.removeTab(forIndex: indexPath)
-        })
-        
+        }
         share.backgroundColor = UIColor.systemOrange
-        share.image = UIImage.templateImageNamed("menu-Send")?.tinted(withColor: .white)
-        more.image = UIImage.templateImageNamed("menu-More-Options")?.tinted(withColor: .white)
-        delete.image = UIImage.templateImageNamed("menu-CloseTabs")?.tinted(withColor: .white)
-        
-        let configuration = UISwipeActionsConfiguration(actions: [delete, share, more])
-        return configuration
+        share.image = UIImage.templateImageNamed("menu-Send")?.withTintColor(.white)
+        more.image = UIImage.templateImageNamed("menu-More-Options")?.withTintColor(.white)
+        delete.image = UIImage.templateImageNamed("menu-CloseTabs")?.withTintColor(.white)
+
+        return UISwipeActionsConfiguration(actions: [delete, share, more])
     }
 }
 

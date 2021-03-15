@@ -226,38 +226,42 @@ class BookmarkDetailPanel: SiteTableViewController {
         navigationItem.rightBarButtonItem?.isEnabled = url?.schemeIsValid == true && url?.host != nil
     }
 
-    func save() -> Success {
+    func save() -> Deferred<Result<(), BookmarkDetailPanelError>> {
         if isNew {
             if bookmarkNodeType == .bookmark {
                 guard let bookmarkItemURL = self.bookmarkItemURL else {
-                    return deferMaybe(BookmarkDetailPanelError())
+                    return Deferred(value: Result.failure(BookmarkDetailPanelError()))
                 }
 
                 return profile.places.createBookmark(parentGUID: parentBookmarkFolder.guid, url: bookmarkItemURL, title: bookmarkItemOrFolderTitle).bind({ result in
-                    return result.isFailure ? deferMaybe(BookmarkDetailPanelError()) : succeed()
+                    return result.isFailure ? Deferred(value: Result.failure(BookmarkDetailPanelError())) : Deferred(value: Result.success(()))
                 })
             } else if bookmarkNodeType == .folder {
                 guard let bookmarkItemOrFolderTitle = self.bookmarkItemOrFolderTitle else {
-                    return deferMaybe(BookmarkDetailPanelError())
+                    return Deferred(value: Result.failure(BookmarkDetailPanelError()))
                 }
 
                 return profile.places.createFolder(parentGUID: parentBookmarkFolder.guid, title: bookmarkItemOrFolderTitle).bind({ result in
-                    return result.isFailure ? deferMaybe(BookmarkDetailPanelError()) : succeed()
+                    return result.isFailure ? Deferred(value: Result.failure(BookmarkDetailPanelError())) : Deferred(value: Result.success(()))
                 })
             }
         } else {
             guard let bookmarkNodeGUID = self.bookmarkNodeGUID else {
-                return deferMaybe(BookmarkDetailPanelError())
+                return Deferred(value: Result.failure(BookmarkDetailPanelError()))
             }
 
             if bookmarkNodeType == .bookmark {
-                return profile.places.updateBookmarkNode(guid: bookmarkNodeGUID, parentGUID: parentBookmarkFolder.guid, position: bookmarkItemPosition, title: bookmarkItemOrFolderTitle, url: bookmarkItemURL)
+                return profile.places.updateBookmarkNode(guid: bookmarkNodeGUID, parentGUID: parentBookmarkFolder.guid, position: bookmarkItemPosition, title: bookmarkItemOrFolderTitle, url: bookmarkItemURL).bind { result in
+                    return result.isFailure ? Deferred(value: Result.failure(BookmarkDetailPanelError())) : Deferred(value: Result.success(()))
+                }
             } else if bookmarkNodeType == .folder {
-                return profile.places.updateBookmarkNode(guid: bookmarkNodeGUID, parentGUID: parentBookmarkFolder.guid, position: bookmarkItemPosition, title: bookmarkItemOrFolderTitle)
+                return profile.places.updateBookmarkNode(guid: bookmarkNodeGUID, parentGUID: parentBookmarkFolder.guid, position: bookmarkItemPosition, title: bookmarkItemOrFolderTitle).bind { result in
+                    return result.isFailure ? Deferred(value: Result.failure(BookmarkDetailPanelError())) : Deferred(value: Result.success(()))
+                }
             }
         }
 
-        return deferMaybe(BookmarkDetailPanelError())
+        return Deferred(value: Result.failure(BookmarkDetailPanelError()))
     }
 
     // MARK: UITableViewDataSource | UITableViewDelegate

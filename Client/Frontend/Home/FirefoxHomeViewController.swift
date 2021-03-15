@@ -311,7 +311,7 @@ extension FirefoxHomeViewController {
 
             switch self {
             case .pocket, .libraryShortcuts:
-                let window = UIApplication.shared.keyWindow
+                let window = (UIApplication.shared.delegate as? AppDelegate)?.window
                 let safeAreaInsets = window?.safeAreaInsets.left ?? 0
                 insets += FirefoxHomeUX.MinimumInsets + safeAreaInsets
                 return insets
@@ -325,10 +325,10 @@ extension FirefoxHomeViewController {
             switch self {
             case .pocket:
                 var numItems: CGFloat = FirefoxHomeUX.numberOfItemsPerRowForSizeClassIpad[traits.horizontalSizeClass]
-                if UIApplication.shared.statusBarOrientation.isPortrait {
+                if (UIApplication.shared.delegate as? AppDelegate)?.window?.windowScene?.interfaceOrientation.isPortrait ?? true {
                     numItems = numItems - 1
                 }
-                if traits.horizontalSizeClass == .compact && UIApplication.shared.statusBarOrientation.isLandscape {
+                if traits.horizontalSizeClass == .compact && (UIApplication.shared.delegate as? AppDelegate)?.window?.windowScene?.interfaceOrientation.isLandscape ?? false {
                     numItems = numItems - 1
                 }
                 return numItems
@@ -410,10 +410,7 @@ extension FirefoxHomeViewController: UICollectionViewDelegateFlowLayout {
                     return view
                 case .libraryShortcuts:
                     view.title = title
-                    view.moreButton.isHidden = false
-                    view.moreButton.setTitle(Strings.AppMenuLibrarySeeAllTitleString, for: .normal)
-                    view.moreButton.addTarget(self, action: #selector(openHistory), for: .touchUpInside)
-                    view.moreButton.accessibilityIdentifier = "libraryMoreButton"
+                    view.moreButton.isHidden = true
                     view.titleLabel.accessibilityIdentifier = "libraryTitle"
                     return view
             }
@@ -505,10 +502,10 @@ extension FirefoxHomeViewController {
 
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         var numItems: CGFloat = FirefoxHomeUX.numberOfItemsPerRowForSizeClassIpad[self.traitCollection.horizontalSizeClass]
-        if UIApplication.shared.statusBarOrientation.isPortrait {
+        if (UIApplication.shared.delegate as? AppDelegate)?.window?.windowScene?.interfaceOrientation.isPortrait ?? true {
             numItems = numItems - 1
         }
-        if self.traitCollection.horizontalSizeClass == .compact && UIApplication.shared.statusBarOrientation.isLandscape {
+        if self.traitCollection.horizontalSizeClass == .compact && (UIApplication.shared.delegate as? AppDelegate)?.window?.windowScene?.interfaceOrientation.isLandscape ?? false {
             numItems = numItems - 1
         }
         switch Section(section) {
@@ -539,7 +536,7 @@ extension FirefoxHomeViewController {
 
     func configureLibraryShortcutsCell(_ cell: UICollectionViewCell, forIndexPath indexPath: IndexPath) -> UICollectionViewCell {
         let libraryCell = cell as! ASLibraryCell
-        let targets = [#selector(openBookmarks), #selector(openReadingList), #selector(openDownloads), #selector(openSyncedTabs)]
+        let targets = [#selector(openBookmarks), #selector(openReadingList), #selector(openHistory), #selector(openDownloads)]
         libraryCell.libraryButtons.map({ $0.button }).zip(targets).forEach { (button, selector) in
             button.removeTarget(nil, action: nil, for: .allEvents)
             button.addTarget(self, action: selector, for: .touchUpInside)
@@ -754,10 +751,6 @@ extension FirefoxHomeViewController {
         homePanelDelegate?.homePanelDidRequestToOpenLibrary(panel: .history)
     }
 
-    @objc func openSyncedTabs() {
-        homePanelDelegate?.homePanelDidRequestToOpenLibrary(panel: .syncedTabs)
-    }
-
     @objc func openReadingList() {
         homePanelDelegate?.homePanelDidRequestToOpenLibrary(panel: .readingList)
     }
@@ -846,8 +839,8 @@ extension FirefoxHomeViewController: HomePanelContextMenu {
 
         let shareAction = PhotonActionSheetItem(title: Strings.ShareContextMenuTitle, iconString: "action_share", handler: { _, _ in
             let helper = ShareExtensionHelper(url: siteURL, tab: nil)
-            let controller = helper.createActivityViewController({ (_, _) in })
-            if UI_USER_INTERFACE_IDIOM() == .pad, let popoverController = controller.popoverPresentationController {
+            let controller = helper.createActivityViewController { (_, _) in }
+            if UIDevice.current.userInterfaceIdiom == .pad, let popoverController = controller.popoverPresentationController {
                 let cellRect = sourceView?.frame ?? .zero
                 let cellFrameInSuperview = self.collectionView?.convert(cellRect, to: self.collectionView) ?? .zero
 

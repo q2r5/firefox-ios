@@ -6,6 +6,7 @@ import Foundation
 
 import Shared
 import SwiftyJSON
+import MozillaAppServices
 
 public class PushRegistration: NSObject, NSCoding {
     let uaid: String

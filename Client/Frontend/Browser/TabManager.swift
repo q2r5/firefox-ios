@@ -411,7 +411,6 @@ class TabManager: NSObject {
         guard let index = tabs.firstIndex(where: { $0 === tab }) else { return }
         removeTab(tab, flushToDisk: true, notify: true)
         updateIndexAfterRemovalOf(tab, deletedIndex: index)
-        hideNetworkActivitySpinner()
 
         TelemetryWrapper.recordEvent(
             category: .action,
@@ -590,6 +589,14 @@ class TabManager: NSObject {
         return filterdTabs.first
     }
 
+    func getTabForURL(_ url: URL, uuid: String) -> Tab? {
+        assert(Thread.isMainThread)
+        let filterdTabs = tabs.filter { tab -> Bool in
+            tab.tabUUID == uuid
+        }
+        return filterdTabs.first
+    }
+
     @objc func prefsDidChange() {
         DispatchQueue.main.async {
             let allowPopups = !(self.profile.prefs.boolForKey(PrefsKeys.KeyBlockPopups) ?? true)
@@ -663,8 +670,6 @@ extension TabManager: WKNavigationDelegate {
 
     // Note the main frame JSContext (i.e. document, window) is not available yet.
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-        UIApplication.shared.isNetworkActivityIndicatorVisible = true
-
         if let tab = self[webView], let blocker = tab.contentBlocker {
             blocker.clearPageStats()
         }
@@ -681,7 +686,6 @@ extension TabManager: WKNavigationDelegate {
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        hideNetworkActivitySpinner()
         // tab restore uses internal pages, so don't call storeChanges unnecessarily on startup
         if let url = webView.url {
             if let internalUrl = InternalURL(url), internalUrl.isSessionRestore {
@@ -690,17 +694,6 @@ extension TabManager: WKNavigationDelegate {
 
             storeChanges()
         }
-    }
-
-    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        hideNetworkActivitySpinner()
-    }
-
-    func hideNetworkActivitySpinner() {
-        for tab in tabs where tab.webView?.isLoading == true {
-            return
-        }
-        UIApplication.shared.isNetworkActivityIndicatorVisible = false
     }
 
     /// Called when the WKWebView's content process has gone away. If this happens for the currently selected tab

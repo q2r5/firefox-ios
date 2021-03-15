@@ -5,7 +5,7 @@
 import UIKit
 import Shared
 import Storage
-import MozillaAppServices
+import Sync
 import Telemetry
 
 private enum SearchListSection: Int {
@@ -272,7 +272,6 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
             return
         }
 
-        Telemetry.default.recordSearch(location: .quickSearch, searchEngine: engine.engineID ?? "other")
         GleanMetrics.Search.counts["\(engine.engineID ?? "custom").\(SearchesMeasurement.SearchLocation.quickSearch.rawValue)"].add()
 
         searchDelegate?.searchViewController(self, didSelectURL: url)
@@ -304,8 +303,8 @@ class SearchViewController: SiteTableViewController, KeyboardHelperDelegate, Loa
     fileprivate func animateSearchEnginesWithKeyboard(_ keyboardState: KeyboardState) {
         layoutSearchEngineScrollView()
 
-        UIView.animate(withDuration: keyboardState.animationDuration, animations: {
-            UIView.setAnimationCurve(keyboardState.animationCurve)
+        UIView.animate(withDuration: keyboardState.animationDuration, delay: 0,
+                       options: [UIView.AnimationOptions(rawValue: UInt(keyboardState.animationCurve.rawValue << 16))], animations: {
             self.view.layoutIfNeeded()
         })
     }
@@ -510,7 +509,6 @@ extension SearchViewController: SuggestionCellDelegate {
         let engine = searchEngines.defaultEngine
 
         if let url = engine.searchURLForQuery(suggestion) {
-            Telemetry.default.recordSearch(location: .suggestion, searchEngine: engine.engineID ?? "other")
             GleanMetrics.Search.counts["\(engine.engineID ?? "custom").\(SearchesMeasurement.SearchLocation.suggestion.rawValue)"].add()
 
             searchDelegate?.searchViewController(self, didSelectURL: url)
@@ -693,7 +691,7 @@ fileprivate class SuggestionButton: InsetButton {
     override init(frame: CGRect) {
         super.init(frame: frame)
 
-        setTitleColor(UIColor.theme.homePanel.searchSuggestionPillForeground, for: [])
+        setTitleColor(UIColor.theme.homePanel.searchSuggestionPillForeground, for: .normal)
         setTitleColor(UIColor.Photon.White100, for: .highlighted)
         titleLabel?.font = DynamicFontHelper.defaultHelper.DefaultMediumFont
         backgroundColor = SearchViewControllerUX.SuggestionBackgroundColor

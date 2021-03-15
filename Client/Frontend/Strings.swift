@@ -247,6 +247,7 @@ extension Strings {
     // Settings strings
     public static let FxAFirefoxAccount = MZLocalizedString("FxA.FirefoxAccount", value: "Firefox Account", comment: "Settings section title for Firefox Account")
     public static let FxASignInToSync = MZLocalizedString("FxA.SignIntoSync", value: "Sign in to Sync", comment: "Button label to sign into Sync")
+    public static let FxASignInToFirefox = MZLocalizedString("FxA.SignIntoFirefox", value: "Sign In to Firefox", comment: "Button label to sign into Firefox")
     public static let FxATakeYourWebWithYou = MZLocalizedString("FxA.TakeYourWebWithYou", value: "Take Your Web With You", comment: "Call to action for sign into sync button")
     public static let FxASyncUsageDetails = MZLocalizedString("FxA.SyncExplain", value: "Get your tabs, bookmarks, and passwords from your other devices.", comment: "Label explaining what sync does")
     public static let FxAAccountVerificationRequired = MZLocalizedString("FxA.AccountVerificationRequired", value: "Account Verification Required", comment: "Label stating your account is not verified")
@@ -424,6 +425,7 @@ extension Strings {
 // Download Helper
 extension Strings {
     public static let OpenInDownloadHelperAlertDownloadNow = MZLocalizedString("Downloads.Alert.DownloadNow", value: "Download Now", comment: "The label of the button the user will press to start downloading a file")
+    public static let OpenInDownloadHelperAlertOpenIn = MZLocalizedString("Downloads.Alert.OpenIn", value: "Open In..", comment: "The label of the button the user will press to open a file with a certain app")
     public static let DownloadsButtonTitle = MZLocalizedString("Downloads.Toast.GoToDownloads.Button", value: "Downloads", comment: "The button to open a new tab with the Downloads home panel")
     public static let CancelDownloadDialogTitle = MZLocalizedString("Downloads.CancelDialog.Title", value: "Cancel Download", comment: "Alert dialog title when the user taps the cancel download icon.")
     public static let CancelDownloadDialogMessage = MZLocalizedString("Downloads.CancelDialog.Message", value: "Are you sure you want to cancel this download?", comment: "Alert dialog body when the user taps the cancel download icon.")

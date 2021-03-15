@@ -73,6 +73,33 @@ public extension LoginRecord {
         // All good.
         return Maybe(success: ())
     }
+    
+    var isValidResult: Result<(), LoginRecordError> {
+        // Referenced from https://mxr.mozilla.org/mozilla-central/source/toolkit/components/passwordmgr/nsLoginManager.js?rev=f76692f0fcf8&mark=280-281#271
+
+        // Logins with empty hostnames are not valid.
+        if hostname.isEmpty {
+            return Result.failure(LoginRecordError(description: "Can't add a login with an empty hostname."))
+        }
+
+        // Logins with empty passwords are not valid.
+        if password.isEmpty {
+            return Result.failure(LoginRecordError(description: "Can't add a login with an empty password."))
+        }
+
+        // Logins with both a formSubmitURL and httpRealm are not valid.
+        if let _ = formSubmitURL, let _ = httpRealm {
+            return Result.failure(LoginRecordError(description: "Can't add a login with both a httpRealm and formSubmitURL."))
+        }
+
+        // Login must have at least a formSubmitURL or httpRealm.
+        if (formSubmitURL == nil) && (httpRealm == nil) {
+            return Result.failure(LoginRecordError(description: "Can't add a login without a httpRealm or formSubmitURL."))
+        }
+
+        // All good.
+        return Result.success(())
+    }
 }
 
 public class LoginRecordError: MaybeErrorType {

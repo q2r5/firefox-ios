@@ -9,12 +9,9 @@ extension UIButton {
         let colorView = UIView(frame: CGRect(width: 1, height: 1))
         colorView.backgroundColor = color
 
-        UIGraphicsBeginImageContext(colorView.bounds.size)
-        if let context = UIGraphicsGetCurrentContext() {
-            colorView.layer.render(in: context)
+        let colorImage = UIGraphicsImageRenderer(size: colorView.bounds.size).image { ctx in
+            colorView.layer.render(in: ctx.cgContext)
         }
-        let colorImage = UIGraphicsGetImageFromCurrentImageContext()
-        UIGraphicsEndImageContext()
 
         self.setBackgroundImage(colorImage, for: state)
     }

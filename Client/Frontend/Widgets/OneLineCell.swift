@@ -10,6 +10,102 @@ struct OneLineCellUX {
     static let HorizontalMargin: CGFloat = 16
 }
 
+struct OneLineCellContentConfiguration: UIContentConfiguration, Hashable {
+    var image: UIImage?
+    var title: String?
+
+    private(set) var trailingMargin: CGFloat = 0
+    var indentation: CGFloat = 0
+
+    func makeContentView() -> UIView & UIContentView {
+        return OneLineCellContentView(configuration: self)
+    }
+    
+    func updated(for state: UIConfigurationState) -> OneLineCellContentConfiguration {
+        guard let state = state as? UICellConfigurationState else { return self }
+        var updatedConfig = self
+        updatedConfig.trailingMargin = state.isEditing ? 0 : -OneLineCellUX.HorizontalMargin
+
+        return updatedConfig
+    }
+}
+
+class OneLineCellContentView: UIView, UIContentView {
+    init(configuration: OneLineCellContentConfiguration) {
+        super.init(frame: .zero)
+        setupSubviews()
+        apply(configuration: configuration)
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    var configuration: UIContentConfiguration {
+        get { appliedConfiguration }
+        set {
+            guard let newConfig = newValue as? OneLineCellContentConfiguration else { return }
+            apply(configuration: newConfig)
+        }
+    }
+
+    private var appliedConfiguration: OneLineCellContentConfiguration!
+
+    private func apply(configuration: OneLineCellContentConfiguration) {
+        guard appliedConfiguration != configuration else { return }
+        appliedConfiguration = configuration
+        imageView.image = appliedConfiguration.image
+        textLabel.text = appliedConfiguration.title
+    }
+    
+    let imageView = UIImageView()
+    let textLabel = UILabel()
+    
+    private func setupSubviews() {
+        addSubview(imageView)
+        imageView.translatesAutoresizingMaskIntoConstraints = true
+        imageView.contentMode = .scaleAspectFill
+        imageView.layer.cornerRadius = OneLineCellUX.ImageCornerRadius
+        imageView.layer.masksToBounds = true
+        imageView.snp.makeConstraints { make in
+            make.width.height.equalTo(OneLineCellUX.ImageSize)
+            make.leading.equalTo(appliedConfiguration.indentation + OneLineCellUX.HorizontalMargin)
+            make.centerY.equalToSuperview()
+        }
+
+        addSubview(textLabel)
+        textLabel.font = DynamicFontHelper.defaultHelper.DeviceFontHistoryPanel
+        textLabel.textColor = UIColor.theme.tableView.rowText
+        textLabel.snp.makeConstraints { make in
+            make.leading.equalTo(appliedConfiguration.indentation + OneLineCellUX.ImageSize + OneLineCellUX.HorizontalMargin * 2)
+            make.trailing.equalTo(appliedConfiguration.trailingMargin)
+            make.centerY.equalToSuperview()
+        }
+    }
+}
+
+class OneLineCollectionViewListCell: UICollectionViewListCell {
+    var image: UIImage? {
+        didSet {
+            setNeedsUpdateConfiguration()
+        }
+    }
+
+    var title: String? {
+        didSet {
+            setNeedsUpdateConfiguration()
+        }
+    }
+    
+    override func updateConfiguration(using state: UICellConfigurationState) {
+        var content = OneLineCellContentConfiguration().updated(for: state)
+        content.image = image
+        content.title = title
+        content.indentation = CGFloat(indentationLevel) * indentationWidth
+        contentConfiguration = content
+    }
+}
+
 class OneLineTableViewCell: UITableViewCell, Themeable {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)

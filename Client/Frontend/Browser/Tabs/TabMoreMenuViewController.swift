@@ -55,7 +55,7 @@ class TabMoreMenuViewController: UIViewController, Themeable {
     
     lazy var handleView: UIView = {
         let handleView = UIView()
-        handleView.backgroundColor = .black
+        handleView.backgroundColor = UIColor.systemFill
         handleView.alpha = DrawerViewControllerUX.HandleAlpha
         handleView.layer.cornerRadius = DrawerViewControllerUX.HandleHeight / 2
         return handleView
@@ -68,11 +68,7 @@ class TabMoreMenuViewController: UIViewController, Themeable {
     }()
     
     func applyTheme() {
-        if ThemeManager.instance.currentName == .normal {
-            tabMoreMenuHeader.backgroundColor = UIColor(rgb: 0xF2F2F7)
-        } else {
-            tabMoreMenuHeader.backgroundColor = UIColor(rgb: 0x1C1C1E)
-        }
+        tabMoreMenuHeader.applyTheme()
     }
     
     @objc func displayThemeChanged() {
@@ -139,12 +135,11 @@ class TabMoreMenuViewController: UIViewController, Themeable {
     }
     
     func configure(headerView: TabMoreMenuHeader, tab: Tab? = nil) {
-        guard  let tab = tab else { return }
+        guard let tab = tab else { return }
         let baseDomain = tab.url?.baseDomain
         headerView.descriptionLabel.text = baseDomain != nil ? baseDomain!.contains("local") ? " " : baseDomain : " "
         headerView.titleLabel.text = tab.displayTitle
         headerView.imageView.image = tab.screenshot ?? UIImage()
-        headerView.backgroundColor = UIColor(rgb: 0xF2F2F7)
     }
     
     func dismissMenu() {
@@ -168,13 +163,22 @@ extension TabMoreMenuViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "moreMenuCell", for: indexPath)
-        let lightColor = UIColor.theme.tableView.rowBackground
-        let darkColor = UIColor.Photon.Grey80
-        cell.backgroundColor = ThemeManager.instance.currentName == .normal ? lightColor : darkColor
         cell.textLabel?.text = titles[indexPath.section]?[indexPath.row]
         cell.accessoryView = imageViews[indexPath.section]?[indexPath.row]
-        cell.accessoryView?.tintColor = UIColor.theme.textField.textAndTint
         
+        if #available(iOS 13.0, *) {
+            cell.backgroundColor = UIColor.secondarySystemGroupedBackground
+            cell.textLabel?.textColor = UIColor.label
+            cell.detailTextLabel?.textColor = UIColor.secondaryLabel
+            cell.accessoryView?.tintColor = UIColor.secondaryLabel
+        } else {
+            let lightColor = UIColor.theme.tableView.rowBackground
+            let darkColor = UIColor.Photon.Grey80
+            cell.backgroundColor = ThemeManager.instance.currentName == .normal ? lightColor : darkColor
+            cell.textLabel?.textColor = UIColor.theme.tableView.rowText
+            cell.detailTextLabel?.textColor = UIColor.theme.tableView.rowDetailText
+            cell.accessoryView?.tintColor = UIColor.theme.tabTray.cellCloseButton
+        }
         return cell
     }
 }
@@ -197,7 +201,7 @@ extension TabMoreMenuViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        guard let tab = tab, let url = self.tab?.sessionData?.urls.last ?? self.tab?.url else { return }
+        guard let tab = tab, let url = tab.sessionData?.urls.last ?? tab.url else { return }
         
         switch indexPath.section {
         case 0:

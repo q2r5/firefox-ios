@@ -52,7 +52,7 @@
     return [[self alloc] initWithData: data];
 }
 
-+ (id) numberWithOpenSSLNumber: (BIGNUM*) bn
++ (id) numberWithOpenSSLNumber: (const BIGNUM*) bn
 {
     return [[self alloc] initWithOpenSSLNumber: bn];
 }
@@ -140,7 +140,7 @@
     return self;
 }
 
-- (id)initWithOpenSSLNumber:(BIGNUM*)bn
+- (id)initWithOpenSSLNumber:(const BIGNUM*)bn
 {
     if ((self = [self init]) != nil) {
         BN_copy(bigNumber, bn);
@@ -153,14 +153,10 @@
 }
 
 - (void) dealloc {
-	BN_clear_free(bigNumber), bigNumber = NULL;
-	BN_CTX_free(context), context = NULL;
-}
-
-- (void) finalize {
-	BN_clear_free(bigNumber), bigNumber = NULL;
-	BN_CTX_free(context), context = NULL;
-	[super finalize];
+	BN_clear_free(bigNumber);
+	bigNumber = NULL;
+	BN_CTX_free(context);
+	context = NULL;
 }
 
 #pragma mark -

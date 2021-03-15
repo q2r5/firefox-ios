@@ -444,7 +444,7 @@ class CheckmarkSetting: Setting {
             cell.accessoryType = .checkmark
             cell.tintColor = isChecked() ? UIColor.theme.tableView.rowActionAccessory : UIColor.clear
         } else {
-            let window = UIApplication.shared.keyWindow
+            let window = UIApplication.shared.windows.filter({$0.isKeyWindow}).first
             let safeAreaInsets = window?.safeAreaInsets.left ?? 0
             cell.indentationWidth = 42 + safeAreaInsets
             cell.indentationLevel = 1
